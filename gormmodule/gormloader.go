@@ -2,6 +2,8 @@ package gormmodule
 
 import (
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"strconv"
 	"strings"
 )
@@ -16,6 +18,8 @@ const (
 )
 
 type GormModule struct {
+	db *gorm.DB
+
 	Username string
 	Password string
 	Host     string
@@ -44,6 +48,8 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 }
 
+// Interceptor 初始化gorm DB实例拦截器
+// request instance: *gorm.DB
 func (g *GormModule) Interceptor() *func(instance interface{}) {
 	if g.GormInterceptor != nil {
 		return g.GormInterceptor
@@ -52,6 +58,14 @@ func (g *GormModule) Interceptor() *func(instance interface{}) {
 }
 
 func (g *GormModule) Register(interceptor *func(instance interface{})) error {
+	db, err := gorm.Open(mysql.Open(g.toDsn()))
+	if err != nil {
+		return err
+	}
+	if interceptor != nil {
+		(*interceptor)(db)
+	}
+	g.db = db
 	return nil
 }
 
@@ -59,7 +73,7 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 	return false, nil
 }
 
-func (g *GormModule) toCoonDsn() string {
+func (g *GormModule) toDsn() string {
 	if g.DBType == "" {
 		g.DBType = DBTypeMySQL
 	}
