@@ -21,10 +21,14 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 }
 
-func (g *GormModule) Register(interceptor *func(instance interface{})) error {
+func (g *GormModule) Interceptor() *func(instance interface{}) {
+	if g.GormInterceptor != nil {
+		return g.GormInterceptor
+	}
 	return nil
 }
-func (g *GormModule) Interceptor() *func(instance interface{}) {
+
+func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	return nil
 }
 
