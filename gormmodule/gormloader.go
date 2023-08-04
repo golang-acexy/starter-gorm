@@ -67,6 +67,9 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	if interceptor != nil {
 		(*interceptor)(db)
 	}
+	db.Logger = &logrusLogger{
+		log: log.Logrus(),
+	}
 	g.db = db
 	return nil
 }
