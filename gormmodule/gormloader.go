@@ -1,11 +1,13 @@
 package gormmodule
 
 import (
+	"github.com/acexy/golang-toolkit/log"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DBType string
@@ -23,7 +25,7 @@ type GormModule struct {
 	Username string
 	Password string
 	Host     string
-	Port     uint8
+	Port     uint
 	Database string
 
 	// default charset : utf8mb4
@@ -42,9 +44,9 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 	return &declaration.ModuleConfig{
 		ModuleName:               "Gorm",
-		UnregisterPriority:       1,
-		UnregisterAllowAsync:     true,
-		UnregisterMaxWaitSeconds: 20,
+		UnregisterPriority:       20,
+		UnregisterAllowAsync:     false,
+		UnregisterMaxWaitSeconds: 30,
 	}
 }
 
@@ -70,7 +72,40 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 }
 
 func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	return false, nil
+	sqlDb, err := g.db.DB()
+	if err != nil {
+		log.Logrus().WithError(err).Errorln(" unregister error when get sqldb")
+		return false, err
+	}
+
+	err = sqlDb.Close()
+	if err != nil {
+		log.Logrus().WithError(err).Errorln(" unregister error when close sqldb")
+		return false, err
+	}
+
+	done := make(chan bool)
+
+	go func() {
+		// check stats
+		for {
+			s := sqlDb.Stats()
+			log.Logrus().Tracef("check db stats %+v", s)
+			if s.Idle == 0 && s.InUse == 0 && s.OpenConnections == 0 {
+				done <- true
+				return
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-done:
+		gracefully = true
+	case <-time.After(time.Second * time.Duration(maxWaitSeconds)):
+		gracefully = false
+	}
+	return
 }
 
 func (g *GormModule) toDsn() string {
@@ -88,4 +123,8 @@ func (g *GormModule) toDsn() string {
 		builder.WriteString("&parseTime=True") // support time.Time
 	}
 	return builder.String()
+}
+
+func (g *GormModule) DB() *gorm.DB {
+	return g.db
 }
