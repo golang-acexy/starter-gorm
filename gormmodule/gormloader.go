@@ -12,6 +12,8 @@ import (
 
 type DBType string
 
+var db *gorm.DB
+
 const (
 	defaultCharset = "utf8mb4"
 )
@@ -20,8 +22,6 @@ const (
 )
 
 type GormModule struct {
-	db *gorm.DB
-
 	Username string
 	Password string
 	Host     string
@@ -60,7 +60,8 @@ func (g *GormModule) Interceptor() *func(instance interface{}) {
 }
 
 func (g *GormModule) Register(interceptor *func(instance interface{})) error {
-	db, err := gorm.Open(mysql.Open(g.toDsn()))
+	var err error
+	db, err = gorm.Open(mysql.Open(g.toDsn()))
 	if err != nil {
 		return err
 	}
@@ -70,20 +71,17 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	db.Logger = &logrusLogger{
 		log: log.Logrus(),
 	}
-	g.db = db
 	return nil
 }
 
 func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	sqlDb, err := g.db.DB()
+	sqlDb, err := db.DB()
 	if err != nil {
-		log.Logrus().WithError(err).Errorln(" unregister error when get sqldb")
 		return false, err
 	}
 
 	err = sqlDb.Close()
 	if err != nil {
-		log.Logrus().WithError(err).Errorln(" unregister error when close sqldb")
 		return false, err
 	}
 
@@ -128,6 +126,6 @@ func (g *GormModule) toDsn() string {
 	return builder.String()
 }
 
-func (g *GormModule) DB() *gorm.DB {
-	return g.db
+func (g *GormModule) RawDB() *gorm.DB {
+	return db
 }
