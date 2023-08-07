@@ -17,6 +17,8 @@ github.com/golang-acexy/starter-parent v0.0.0-20230804103729-2b719f5c1188 h1:Tb0
 github.com/golang-acexy/starter-parent v0.0.0-20230804103729-2b719f5c1188/go.mod h1:3qa4MpeSCeOh5VfWIR/GW7nYSD2Sg0msZOVQhwKuQaI=
 github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999 h1:RaxkLgFdIJQvLREWCbLGgToeaRSfce4Hr7JaR63+ibk=
 github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999/go.mod h1:mvSSgR3wQdtdhqIupIS90ezB4xU0XFhkAPtsZoss618=
+github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f h1:U6r+4y0VoVTYRBpGHjhMwyKUcU39AvJH+rm/IjrU7xg=
+github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f/go.mod h1:RNUB3kvUmmj9bE8jy/LzJs3U9N418/HorWSZGCvz/uQ=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.5 h1:/o9tlHleP7gOFmsnYNz3RGnqzefHA47wQpKrrdTIwXQ=

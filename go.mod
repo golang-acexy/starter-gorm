@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/acexy/golang-toolkit v0.0.0-20230806033004-79b4c35b4e8f
-	github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999
+	github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/gorm v1.25.2

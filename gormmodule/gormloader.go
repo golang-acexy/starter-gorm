@@ -98,7 +98,7 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 				done <- true
 				return
 			}
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}()
 
