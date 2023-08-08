@@ -28,11 +28,10 @@ type GormModule struct {
 	Port     uint
 	Database string
 
-	// default charset : utf8mb4
-	Charset string
+	Charset string // default charset : utf8mb4
+	DBType  DBType // only mysql now
 
-	// only mysql now
-	DBType DBType
+	TimeUTC bool // true: create/update UTC time; false LOCAL time
 
 	GormModuleConfig *declaration.ModuleConfig
 	GormInterceptor  *func(instance interface{})
@@ -61,9 +60,15 @@ func (g *GormModule) Interceptor() *func(instance interface{}) {
 
 func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	var err error
-	db, err = gorm.Open(mysql.Open(g.toDsn()), &gorm.Config{
+	config := &gorm.Config{
 		Logger: &logrusLogger{log.Logrus()},
-	})
+	}
+	if g.TimeUTC {
+		config.NowFunc = func() time.Time {
+			return time.Now().UTC()
+		}
+	}
+	db, err = gorm.Open(mysql.Open(g.toDsn()), config)
 	if err != nil {
 		return err
 	}
