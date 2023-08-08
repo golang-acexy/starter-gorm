@@ -29,7 +29,7 @@ func TestRegisterGorm(t *testing.T) {
 	if err != nil {
 		return
 	}
-	db := gModule.DB()
+	db := gormmodule.RawDB()
 
 	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
 	go func() {

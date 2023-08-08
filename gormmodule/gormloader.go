@@ -61,15 +61,14 @@ func (g *GormModule) Interceptor() *func(instance interface{}) {
 
 func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	var err error
-	db, err = gorm.Open(mysql.Open(g.toDsn()))
+	db, err = gorm.Open(mysql.Open(g.toDsn()), &gorm.Config{
+		Logger: &logrusLogger{log.Logrus()},
+	})
 	if err != nil {
 		return err
 	}
 	if interceptor != nil {
 		(*interceptor)(db)
-	}
-	db.Logger = &logrusLogger{
-		log: log.Logrus(),
 	}
 	return nil
 }
@@ -88,7 +87,6 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 	done := make(chan bool)
 
 	go func() {
-		// check stats
 		for {
 			s := sqlDb.Stats()
 			log.Logrus().Tracef("check db stats %+v", s)
@@ -126,6 +124,6 @@ func (g *GormModule) toDsn() string {
 	return builder.String()
 }
 
-func (g *GormModule) RawDB() *gorm.DB {
+func RawDB() *gorm.DB {
 	return db
 }
