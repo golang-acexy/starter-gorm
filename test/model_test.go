@@ -8,22 +8,11 @@ import (
 )
 
 func init() {
-	var moduleLoaders []declaration.ModuleLoader
-	var gModule *gormmodule.GormModule
-	gModule = &gormmodule.GormModule{
-		Username: "test",
-		Password: "test",
-		Database: "test",
-		Host:     "127.0.0.1",
-		Port:     3306,
-		TimeUTC:  true,
-	}
-	moduleLoaders = []declaration.ModuleLoader{gModule}
 	m := declaration.Module{ModuleLoaders: moduleLoaders}
 	_ = m.Load()
 }
 
-func TestStudentSave(t *testing.T) {
+func TestSave(t *testing.T) {
 
 	// 分别处于不通的事务中
 	//stu := &Student{Name: "王麻子"}
@@ -47,4 +36,9 @@ func TestStudentSave(t *testing.T) {
 func TestStudentUpdate(t *testing.T) {
 	result := gormmodule.RawDB().Model(&Student{}).Where("name = ?", "王麻子").Update("name", "张三")
 	fmt.Println(result.Error, result.RowsAffected)
+}
+
+func TestStudentSave(t *testing.T) {
+	s := &Student{Name: "赵子龙"}
+	fmt.Println(s.Save())
 }
