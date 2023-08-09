@@ -33,12 +33,11 @@ func TestSave(t *testing.T) {
 	//fmt.Println(result.Error, result.RowsAffected, stu.ID)
 }
 
-func TestStudentUpdate(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	result := gormmodule.RawDB().Model(&Student{}).Where("name = ?", "王麻子").Update("name", "张三")
 	fmt.Println(result.Error, result.RowsAffected)
 }
 
-func TestStudentSave(t *testing.T) {
-	s := &Student{Name: "赵子龙"}
-	fmt.Println(s.Save())
+func TestBaseMapper(t *testing.T) {
+	gormmodule.BaseMapper{}.Save(Student{Name: "张三"})
 }
