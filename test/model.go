@@ -15,6 +15,7 @@ type Student struct {
 	CreatedAt time.Time `gorm:"column:create_time"`
 	UpdatedAt time.Time `gorm:"column:update_time"`
 	Name      string
+	Sex       uint
 }
 
 func (Student) TableName() string {
