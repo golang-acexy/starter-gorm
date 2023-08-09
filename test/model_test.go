@@ -34,7 +34,7 @@ func TestSave(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	result := gormmodule.RawDB().Model(Student{}).Where("name = ?", "王麻子").Update("name", "张三")
+	result := gormmodule.RawDB().Model(Student{}).Where("name = ? and id = ?", "王麻子", 1).Update("name", "张三")
 	fmt.Println(result.Error, result.RowsAffected)
 	result = gormmodule.RawDB().Model(Student{ID: 1}).Updates(Student{Name: "张三", Sex: 0}) // sex = 0 是零值，不会用于更新
 	fmt.Println(result.Error, result.RowsAffected)

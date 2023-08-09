@@ -7,9 +7,9 @@ import (
 )
 
 // DBExecutor 定义基础数据库执行函数类型
-// return 	bool: 是否需要回滚
+// return 	int64: 受影响行数
 //			error: 任何异常将中断执行链并回滚整个事务
-type DBExecutor func(tx *gorm.DB) (bool, error)
+type DBExecutor func(tx *gorm.DB) (int64, error)
 
 type transaction struct {
 	tx              *gorm.DB
@@ -35,13 +35,13 @@ func (t *transaction) Execute() error {
 		return errors.New("no executors")
 	}
 	for _, f := range t.executors {
-		ok, err := f(t.tx)
+		rows, err := f(t.tx)
 		if err != nil {
 			log.Logrus().WithError(err).Error("rollback by error")
 			t.tx.Rollback()
 			return err
 		}
-		if !t.allowZeroAffRow && !ok {
+		if !t.allowZeroAffRow && rows == 0 {
 			t.tx.Rollback()
 			err = errors.New("the execution result does not meet expectations")
 			log.Logrus().WithError(err).Error("rollback by error")
@@ -54,12 +54,12 @@ func (t *transaction) Execute() error {
 
 // Save 预设的保存功能 传入变量指针
 func (t *transaction) Save(entity any) *transaction {
-	t.executors = append(t.executors, func(tx *gorm.DB) (bool, error) {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
 		result := tx.Save(entity)
 		if result.Error != nil {
-			return false, result.Error
+			return 0, result.Error
 		}
-		return result.RowsAffected > 0, nil
+		return result.RowsAffected, nil
 	})
 	return t
 }
@@ -68,12 +68,12 @@ func (t *transaction) Save(entity any) *transaction {
 // request	condition 作为更新时条件 需要指定主键
 //			updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
 func (t *transaction) ModifyById(condition, updated any) *transaction {
-	t.executors = append(t.executors, func(tx *gorm.DB) (bool, error) {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(condition).Updates(updated)
 		if result.Error != nil {
-			return false, result.Error
+			return 0, result.Error
 		}
-		return result.RowsAffected > 0, nil
+		return result.RowsAffected, nil
 	})
 	return t
 }
@@ -81,20 +81,14 @@ func (t *transaction) ModifyById(condition, updated any) *transaction {
 // ModifyByCondition 通过条件更新
 // request	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
 //			where	sql部分条件
-func (t *transaction) ModifyByCondition(updated any, where ...interface{}) *transaction {
-	t.executors = append(t.executors, func(tx *gorm.DB) (bool, error) {
+func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *transaction {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
 		//exec := tx.Table(updated.(schema.Tabler).TableName())
-		exec := tx.Model(updated)
-		if len(where) > 1 {
-			exec.Where(where[0], where[1:])
-		} else {
-			exec.Where(where)
-		}
-		result := exec.Updates(updated)
+		result := tx.Model(updated).Where(where, args...).Updates(updated)
 		if result.Error != nil {
-			return false, result.Error
+			return 0, result.Error
 		}
-		return result.RowsAffected > 0, nil
+		return result.RowsAffected, nil
 	})
 	return t
 }
@@ -102,34 +96,39 @@ func (t *transaction) ModifyByCondition(updated any, where ...interface{}) *tran
 // ModifyByConditionMap 通过条件更新
 // request	updated 作为需要更新数据 传入map[string]interface{}代替struct防止忽略零值
 //			where	sql部分条件
-func (t *transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where ...interface{}) *transaction {
-	t.executors = append(t.executors, func(tx *gorm.DB) (bool, error) {
-		//exec := tx.Table(updated.(schema.Tabler).TableName())
-		exec := tx.Model(model)
-		if len(where) > 1 {
-			exec.Where(where[0], where[1:])
-		} else {
-			exec.Where(where)
-		}
-		result := exec.Updates(updated)
+func (t *transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *transaction {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
+		result := tx.Model(model).Where(where, args...).Updates(updated)
 		if result.Error != nil {
-			return false, result.Error
+			return 0, result.Error
 		}
-		return result.RowsAffected > 0, nil
+		return result.RowsAffected, nil
 	})
 	return t
 }
 
-// RemoveById 预设的删除功能
-// request 	传入一个model对象指针，则其主键必须指定 调用通过主键删除
+// RemoveById 预设的删除功能 根据id或则ids删除
+// request 	传入一个model，则其主键必须指定 调用通过主键删除
 //			传入model切片(每个model需要指定主键) 批量通过主键删除
 func (t *transaction) RemoveById(condition any) *transaction {
-	t.executors = append(t.executors, func(tx *gorm.DB) (bool, error) {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
 		result := tx.Delete(condition)
 		if result.Error != nil {
-			return false, result.Error
+			return 0, result.Error
 		}
-		return result.RowsAffected > 0, nil
+		return result.RowsAffected, nil
+	})
+	return t
+}
+
+// RemoveByCondition 预设删除功能 根据条件删除
+func (t *transaction) RemoveByCondition(model any, where interface{}, args ...interface{}) *transaction {
+	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
+		result := tx.Where(where, args...).Delete(model)
+		if result.Error != nil {
+			return 0, result.Error
+		}
+		return result.RowsAffected, nil
 	})
 	return t
 }
