@@ -13,7 +13,7 @@ func init() {
 	_ = m.Load()
 }
 
-func TestStudentSave(t *testing.T) {
+func TestTransaction(t *testing.T) {
 	tx := gormmodule.NewTransaction(true)
 
 	tx.Save(&Student{Name: "张三"})

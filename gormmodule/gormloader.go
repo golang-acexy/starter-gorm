@@ -31,8 +31,9 @@ type GormModule struct {
 	Charset string // default charset : utf8mb4
 	DBType  DBType // only mysql now
 
-	TimeUTC bool // true: create/update UTC time; false LOCAL time
-	DryRun  bool // create sql not exec
+	TimeUTC       bool // true: create/update UTC time; false LOCAL time
+	DryRun        bool // create sql not exec
+	UseDefaultLog bool
 
 	GormModuleConfig *declaration.ModuleConfig
 	GormInterceptor  *func(instance interface{})
@@ -62,9 +63,11 @@ func (g *GormModule) Interceptor() *func(instance interface{}) {
 func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	var err error
 	config := &gorm.Config{
-		Logger:                                   &logrusLogger{log.Logrus()},
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   g.DryRun,
+	}
+	if !g.UseDefaultLog {
+		config.Logger = &logrusLogger{log.Logrus()}
 	}
 	if g.TimeUTC {
 		config.NowFunc = func() time.Time {
