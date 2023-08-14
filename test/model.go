@@ -1,17 +1,12 @@
 package test
 
 import (
+	"github.com/golang-acexy/starter-gorm/gormmodule"
 	"time"
 )
 
-type BaseModel struct {
-	ID        uint      `gorm:"primaryKey"`
-	CreatedAt time.Time `gorm:"column:create_time"`
-	UpdatedAt time.Time `gorm:"column:update_time"`
-}
-
 type Student struct {
-	ID        uint      `gorm:"<-:false,primaryKey"`
+	ID        uint64    `gorm:"<-:false,primaryKey"`
 	CreatedAt time.Time `gorm:"column:create_time"`
 	UpdatedAt time.Time `gorm:"column:update_time"`
 	Name      string
@@ -23,10 +18,14 @@ func (Student) TableName() string {
 }
 
 type Teacher struct {
-	BaseModel
+	gormmodule.BaseEntity
 	Name string
 }
 
 func (Teacher) TableName() string {
 	return "demo_teacher"
+}
+
+type TeacherBaseMapper struct {
+	gormmodule.BaseMapper[Teacher]
 }

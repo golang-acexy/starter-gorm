@@ -39,7 +39,3 @@ func TestUpdate(t *testing.T) {
 	result = gormmodule.RawDB().Model(Student{ID: 1}).Updates(Student{ID: 1111, Name: "张三", Sex: 0}) // sex = 0 是零值，不会用于更新
 	fmt.Println(result.Error, result.RowsAffected)
 }
-
-func TestBaseMapper(t *testing.T) {
-	gormmodule.BaseMapper{}.Save(Student{Name: "张三"})
-}
