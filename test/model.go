@@ -11,7 +11,7 @@ type BaseModel struct {
 }
 
 type Student struct {
-	ID        uint      `gorm:"primaryKey"`
+	ID        uint      `gorm:"<-:false,primaryKey"`
 	CreatedAt time.Time `gorm:"column:create_time"`
 	UpdatedAt time.Time `gorm:"column:update_time"`
 	Name      string
