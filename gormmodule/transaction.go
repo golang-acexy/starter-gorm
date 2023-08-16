@@ -48,7 +48,11 @@ func (t *transaction) Execute() error {
 			return err
 		}
 	}
-	t.tx.Commit()
+	rs := t.tx.Commit()
+	if rs.Error != nil {
+		t.tx.Rollback()
+		return rs.Error
+	}
 	return nil
 }
 

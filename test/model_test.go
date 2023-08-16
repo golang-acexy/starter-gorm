@@ -13,7 +13,6 @@ func init() {
 }
 
 func TestSave(t *testing.T) {
-
 	// 分别处于不通的事务中
 	stu := &Student{Name: "王麻子"}
 	result := gormmodule.RawDB().Create(stu)

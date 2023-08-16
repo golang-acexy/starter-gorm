@@ -17,7 +17,9 @@ func TestTransaction(t *testing.T) {
 	tx := gormmodule.NewTransaction(true)
 
 	tx.Save(&Student{Name: "张三"})
-	tx.Save(&Teacher{Name: "王五"})
+	teacher := &Teacher{Name: "王五"}
+	//teacher.ID = 123
+	tx.Save(teacher)
 
 	tx.ModifyById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
 	tx.ModifyByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
@@ -36,6 +38,7 @@ func TestTransaction(t *testing.T) {
 	tx.RemoveByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	err := tx.Execute()
+
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
