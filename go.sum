@@ -6,6 +6,8 @@ github.com/acexy/golang-toolkit v0.0.0-20230806033004-79b4c35b4e8f h1:0aLhPEjKhQ
 github.com/acexy/golang-toolkit v0.0.0-20230806033004-79b4c35b4e8f/go.mod h1:EPGfyjyKhz3+QApX9JXZL7EttEC2S5W+WDb2Hc5lcdw=
 github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a h1:JJ7EgHgkN0O/GnpMporT+HqCEqtq/t3DAB86/3AWcRI=
 github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a/go.mod h1:3n9MoH2lbxZhkcgndbXUXLR8njNDeEBO9xgf6mvAdxE=
+github.com/acexy/golang-toolkit v0.0.0-20230811064636-d85e20f3df90 h1:i0Bx1Q3IEzMgcyQ30TxV+tckEWSyjMrBli5kUsAdYYU=
+github.com/acexy/golang-toolkit v0.0.0-20230811064636-d85e20f3df90/go.mod h1:3n9MoH2lbxZhkcgndbXUXLR8njNDeEBO9xgf6mvAdxE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -23,6 +25,8 @@ github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f h1:U6r
 github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f/go.mod h1:RNUB3kvUmmj9bE8jy/LzJs3U9N418/HorWSZGCvz/uQ=
 github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d h1:F5yNDqfU5p9KrqVrNDP4vn96ZYmSyEsGCRewYbGrtYU=
 github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d/go.mod h1:Ywdd6zS6YMaS4pfHLbAqzCXWj+s+2fRrlwjJNeGiBC4=
+github.com/golang-acexy/starter-parent v0.0.0-20230816071010-f699425d3284 h1:Q6GUBE3rFbv7twHe7N1N76RZN95uY65IkEk0ONXlAUY=
+github.com/golang-acexy/starter-parent v0.0.0-20230816071010-f699425d3284/go.mod h1:Ywdd6zS6YMaS4pfHLbAqzCXWj+s+2fRrlwjJNeGiBC4=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.5 h1:/o9tlHleP7gOFmsnYNz3RGnqzefHA47wQpKrrdTIwXQ=
@@ -49,3 +53,5 @@ gorm.io/driver/mysql v1.5.1/go.mod h1:Jo3Xu7mMhCyj8dlrb3WoCaRd1FhsVh+yMXb1jUInf5
 gorm.io/gorm v1.25.1/go.mod h1:L4uxeKpfBml98NYqVqwAdmV1a2nBtAec/cf3fpucW/k=
 gorm.io/gorm v1.25.2 h1:gs1o6Vsa+oVKG/a9ElL3XgyGfghFfkKA2SInQaCyMho=
 gorm.io/gorm v1.25.2/go.mod h1:L4uxeKpfBml98NYqVqwAdmV1a2nBtAec/cf3fpucW/k=
+gorm.io/gorm v1.25.3 h1:zi4rHZj1anhZS2EuEODMhDisGy+Daq9jtPrNGgbQYD8=
+gorm.io/gorm v1.25.3/go.mod h1:L4uxeKpfBml98NYqVqwAdmV1a2nBtAec/cf3fpucW/k=

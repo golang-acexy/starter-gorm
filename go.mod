@@ -3,11 +3,11 @@ module github.com/golang-acexy/starter-gorm
 go 1.18
 
 require (
-	github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a
-	github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d
+	github.com/acexy/golang-toolkit v0.0.0-20230811064636-d85e20f3df90
+	github.com/golang-acexy/starter-parent v0.0.0-20230816071010-f699425d3284
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.1
-	gorm.io/gorm v1.25.2
+	gorm.io/gorm v1.25.3
 )
 
 require (
