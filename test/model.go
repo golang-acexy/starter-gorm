@@ -40,6 +40,6 @@ func (t Teacher) IdStruct() any {
 	return &teacher
 }
 
-type TeacherBaseMapper struct {
+type TeacherMapper struct {
 	gormmodule.BaseMapper[Teacher]
 }

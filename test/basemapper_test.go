@@ -3,7 +3,7 @@ package test
 import "testing"
 
 func TestBaseSave(t *testing.T) {
-	bm := TeacherBaseMapper{}
+	bm := TeacherMapper{}
 	bm.Save(Teacher{Name: "zs"})
 
 	updated := Teacher{Name: "ls"}
