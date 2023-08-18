@@ -27,6 +27,7 @@ func TestRegisterGorm(t *testing.T) {
 	m := declaration.Module{ModuleLoaders: moduleLoaders}
 	err := m.Load()
 	if err != nil {
+		fmt.Printf("%+v\n", err)
 		return
 	}
 	db := gormmodule.RawDB()

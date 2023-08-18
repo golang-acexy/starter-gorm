@@ -1,38 +1,30 @@
 package test
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestBaseSave(t *testing.T) {
 	bm := TeacherMapper{}
-	bm.Save(Teacher{Name: "zs"})
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
+	fmt.Println(bm.Save(&teacher))
+	fmt.Println("saved id", teacher.ID)
 }
 
-//func TestModifyById(t *testing.T) {
-//	bm := TeacherMapper{}
-//	updated := Teacher{Name: "ls"}
-//	updated.ID = 12
-//	bm.ModifyById(updated)
-//}
-//
-//func TestModifyByCondition(t *testing.T) {
-//	bm := TeacherMapper{}
-//	updated := Teacher{Name: "ls"}
-//
-//	condition := Teacher{
-//		Name: "xys1",
-//	}
-//	condition.ID = 1
-//
-//	bm.ModifyByCondition(updated, condition)
-//
-//	bm.ModifyByCondition(updated, "id = ?", 1)
-//}
+func TestModifyById(t *testing.T) {
+	bm := TeacherMapper{}
+	updated := Teacher{Name: "update", Age: 21, Sex: 0}
+	updated.ID = 132
+	fmt.Println(bm.ModifyById(updated))
+}
 
-//func TestRemoveById(t *testing.T) {
-//	bm := TeacherMapper{}
-//	t1 := Teacher{}
-//	t1.ID = 1
-//	t2 := Teacher{}
-//	t2.ID = 2
-//	bm.RemoveById(t1, t2)
-//}
+func TestModifyMapById(t *testing.T) {
+	bm := TeacherMapper{}
+	fmt.Println(bm.ModifyMapById(132, map[string]any{"name": "Miss A", "sex": 0}))
+}
+
+func TestRemoveById(t *testing.T) {
+	bm := TeacherMapper{}
+	fmt.Println(bm.RemoveById(1))
+}

@@ -13,33 +13,26 @@ type Student struct {
 	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:false"`
 	Name      string
 	Sex       uint
+	TeacherId uint
 }
 
 func (Student) TableName() string {
 	return "demo_student"
 }
 
-// teacher
-
+// Teacher 继承BaseModel 并实现 IBaseModel
 type Teacher struct {
 	gormmodule.BaseModel[uint64]
 	Name string
+	Sex  uint
+	Age  uint
 }
 
 func (Teacher) TableName() string {
 	return "demo_teacher"
 }
 
-func (Teacher) EmptyStruct() any {
-	return new(Teacher)
-}
-
-func (t Teacher) IdStruct() any {
-	teacher := Teacher{}
-	teacher.ID = t.ID
-	return &teacher
-}
-
+// TeacherMapper 声明Teacher 获取基于BaseMapper的能力
 type TeacherMapper struct {
 	gormmodule.BaseMapper[Teacher]
 }
