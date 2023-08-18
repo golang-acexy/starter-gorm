@@ -84,10 +84,9 @@ func (t *transaction) ModifyById(condition, updated any) *transaction {
 
 // ModifyByCondition 通过条件更新
 // request	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
-//			where	sql部分条件
+//			where	sql部分条件 也可以是一个model非零参数条件
 func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *transaction {
 	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
-		//exec := tx.Table(updated.(schema.Tabler).TableName())
 		result := tx.Model(updated).Where(where, args...).Updates(updated)
 		if result.Error != nil {
 			return 0, result.Error
@@ -99,7 +98,7 @@ func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...
 
 // ModifyByConditionMap 通过条件更新
 // request	updated 作为需要更新数据 传入map[string]interface{}代替struct防止忽略零值
-//			where	sql部分条件
+//			where	sql部分条件 也可以是一个model非零参数条件
 func (t *transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *transaction {
 	t.executors = append(t.executors, func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(model).Where(where, args...).Updates(updated)

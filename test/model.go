@@ -22,7 +22,7 @@ func (Student) TableName() string {
 // teacher
 
 type Teacher struct {
-	gormmodule.BaseEntity[uint64]
+	gormmodule.BaseModel[uint64]
 	Name string
 }
 

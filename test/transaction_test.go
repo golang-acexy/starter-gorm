@@ -3,15 +3,9 @@ package test
 import (
 	"fmt"
 	"github.com/golang-acexy/starter-gorm/gormmodule"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"gorm.io/gorm"
 	"testing"
 )
-
-func init() {
-	m := declaration.Module{ModuleLoaders: moduleLoaders}
-	_ = m.Load()
-}
 
 func TestTransaction(t *testing.T) {
 	tx := gormmodule.NewTransaction(true)
