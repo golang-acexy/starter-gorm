@@ -81,6 +81,7 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	if interceptor != nil {
 		(*interceptor)(db)
 	}
+	log.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 	return nil
 }
 
