@@ -6,9 +6,9 @@ import (
 )
 
 type BaseModel[IdType any] struct {
-	ID        IdType    `gorm:"<-:create,primaryKey"`
-	CreatedAt time.Time `gorm:"column:create_time" gorm:"<-:create"`
-	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:false"`
+	ID        IdType    `gorm:"<-:create,primaryKey" json:"id"`
+	CreatedAt time.Time `gorm:"column:create_time" gorm:"<-:create" json:"createTime"`
+	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:false" json:"updateTime"`
 }
 
 type IBaseModel interface {
