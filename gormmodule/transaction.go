@@ -24,7 +24,7 @@ type transaction struct {
 
 // NewTransactionChain 创建一个新的事务执行链
 // 该事务的执行方式将在执行Execute统一执行所有预设的SQL过程，任何在操作事务链中交互的参数在立即获取时并不能获取操作后结果，仅在调用Execute后事务链才异常执行
-// param allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0是回滚整个事务
+// allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0是回滚整个事务
 func NewTransactionChain(allowZeroAffRow ...bool) *transaction {
 	tx := &transaction{
 		tx:        db.Begin(),
@@ -68,10 +68,31 @@ func (t *transaction) exec(f func(tx *gorm.DB) (int64, error)) {
 }
 
 // QueryById 通过Id查询数据
-// request model model对象指针，用于指定数据表&接收返回结果
+// model对象指针，用于指定数据表&接收返回结果
 func (t *transaction) QueryById(model any, id any) *transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
-		return checkResult(tx.Find(model, id))
+		return checkResult(tx.Find(model, id), true)
+	})
+	return t
+}
+
+// QueryByCondition 通过Id查询数据
+// condition model非零参数条件
+// result 返回数据指针
+func (t *transaction) QueryByCondition(condition any, result any) *transaction {
+	t.exec(func(tx *gorm.DB) (int64, error) {
+		return checkResult(tx.Model(condition).Where(condition).Scan(result), true)
+	})
+	return t
+}
+
+// QueryByConditionMap 通过Id查询数据
+// model	实体
+// condition 指定字段与值查询数据
+// result 返回数据指针
+func (t *transaction) QueryByConditionMap(model any, condition map[string]any, result any) *transaction {
+	t.exec(func(tx *gorm.DB) (int64, error) {
+		return checkResult(tx.Model(model).Where(condition).Scan(result), true)
 	})
 	return t
 }
@@ -103,8 +124,8 @@ func (t *transaction) ModifyById(condition, updated any) *transaction {
 }
 
 // ModifyByCondition 通过条件更新
-// request	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
-//			where	sql部分条件 也可以是一个model非零参数条件
+// updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
+// where sql部分条件 也可以是一个model非零参数条件
 func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(updated).Where(where, args...).Updates(updated)

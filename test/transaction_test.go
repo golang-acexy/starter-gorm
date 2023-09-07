@@ -9,8 +9,16 @@ import (
 
 func TestTransaction(t *testing.T) {
 
-	// 开启一个事务 该事务的每一步都将立即执行，通过tx.Execute()最终抉择是否需要提交
-	tx := gormmodule.NewTransaction()
+	// 开启一个事务 该事务的每一步都将立即执行，通过tx.Execute() 最终抉择是否需要提交
+	tx := gormmodule.NewTransaction(false)
+
+	i := new([]Teacher)
+	tx.QueryByCondition(Teacher{Name: "王五"}, i)
+	fmt.Printf("%+v\n", i)
+
+	i = new([]Teacher)
+	tx.QueryByConditionMap(Teacher{}, map[string]any{"sex": 0}, i)
+	fmt.Printf("%+v\n", i)
 
 	tx.Save(&Student{Name: "张三"})
 	teacher := &Teacher{Name: "王五"}
@@ -51,7 +59,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionChain(t *testing.T) {
 
-	// 开启一个事务 该事务的每一步事务操作并不会立即执行 通过tx.Execute()最终执行所有事务链步骤，并抉择是否提交
+	// 开启一个事务 该事务的每一步事务操作并不会立即执行 通过tx.Execute() 最终执行所有事务链步骤，并抉择是否提交
 	tx := gormmodule.NewTransactionChain(true)
 
 	tx.Save(&Student{Name: "张三"})
