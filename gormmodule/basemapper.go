@@ -40,6 +40,11 @@ func (b BaseMapper[T]) ModifyMapById(id any, updated map[string]any) (int64, err
 	return checkResult(db.Table(b.Value.TableName()).Where("id = ?", id).Updates(updated))
 }
 
+// ModifyByCondition 通过非零实体条件，更新非零实体字段
+func (b BaseMapper[T]) ModifyByCondition(updated, condition T) (int64, error) {
+	return checkResult(db.Table(b.Value.TableName()).Where(condition).Updates(updated))
+}
+
 // RemoveById 通过ID删除相关数据
 func (b BaseMapper[T]) RemoveById(id ...any) (int64, error) {
 	return checkResult(db.Delete(b.Value, id))

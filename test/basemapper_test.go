@@ -28,3 +28,10 @@ func TestRemoveById(t *testing.T) {
 	bm := TeacherMapper{}
 	fmt.Println(bm.RemoveById(1))
 }
+
+func TestModifyByCondition(t *testing.T) {
+	bm := TeacherMapper{}
+	updated := Teacher{Name: "1", Age: 12}
+	condition := Teacher{Name: "2", Age: 1}
+	fmt.Println(bm.ModifyByCondition(updated, condition))
+}
