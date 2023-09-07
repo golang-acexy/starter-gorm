@@ -13,6 +13,11 @@ func init() {
 	_ = m.Load()
 }
 
+func TestSelect(t *testing.T) {
+	var sutdent Student
+	gormmodule.RawDB().Model(Student{}).Where(&Student{Name: "1"}).Scan(&sutdent)
+}
+
 func TestSave(t *testing.T) {
 	// 分别处于不通的事务中
 	stu := &Student{Name: "王麻子"}
