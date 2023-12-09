@@ -57,10 +57,10 @@ func TestTransaction(t *testing.T) {
 	}
 }
 
-func TestTransactionChain(t *testing.T) {
+func TestTransactionPrepare(t *testing.T) {
 
 	// 开启一个事务 该事务的每一步事务操作并不会立即执行 通过tx.Execute() 最终执行所有事务链步骤，并抉择是否提交
-	tx := gormmodule.NewTransactionChain(true)
+	tx := gormmodule.NewTransactionPrepare(true)
 
 	tx.Save(&Student{Name: "张三"})
 	teacher := &Teacher{Name: "王五"}

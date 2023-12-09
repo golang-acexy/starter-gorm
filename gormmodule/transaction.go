@@ -8,7 +8,8 @@ import (
 
 // DBExecutor 定义基础数据库执行函数类型
 // return 	int64: 受影响行数
-//			error: 任何异常将中断执行链并回滚整个事务
+//
+//	error: 任何异常将中断执行链并回滚整个事务
 type DBExecutor func(tx *gorm.DB) (int64, error)
 
 type transaction struct {
@@ -22,10 +23,10 @@ type transaction struct {
 	canCommit bool
 }
 
-// NewTransactionChain 创建一个新的事务执行链
+// NewTransactionPrepare 创建一个新的事务执行链
 // 该事务的执行方式将在执行Execute统一执行所有预设的SQL过程，任何在操作事务链中交互的参数在立即获取时并不能获取操作后结果，仅在调用Execute后事务链才异常执行
 // allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0是回滚整个事务
-func NewTransactionChain(allowZeroAffRow ...bool) *transaction {
+func NewTransactionPrepare(allowZeroAffRow ...bool) *transaction {
 	tx := &transaction{
 		tx:        db.Begin(),
 		executors: make([]DBExecutor, 0),
@@ -36,6 +37,8 @@ func NewTransactionChain(allowZeroAffRow ...bool) *transaction {
 	return tx
 }
 
+// NewTransaction 创建一个新的事务执行链，该事务的每一步都将立即执行，通过tx.Execute() 最终抉择是否需要提交
+// allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0是回滚整个事务
 func NewTransaction(allowZeroAffRow ...bool) *transaction {
 	tx := &transaction{
 		tx:      db.Begin(),
@@ -111,7 +114,8 @@ func (t *transaction) Save(entity any) *transaction {
 
 // ModifyById 预设的更新功能 通过Id更新
 // request	condition 作为更新时条件 需要指定主键
-//			updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
+//
+//	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
 func (t *transaction) ModifyById(condition, updated any) *transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(condition).Updates(updated)
@@ -139,7 +143,8 @@ func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...
 
 // ModifyByConditionMap 通过条件更新
 // request	updated 作为需要更新数据 传入map[string]interface{}代替struct防止忽略零值
-//			where	sql部分条件 也可以是一个model非零参数条件
+//
+//	where	sql部分条件 也可以是一个model非零参数条件
 func (t *transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(model).Where(where, args...).Updates(updated)
@@ -153,7 +158,8 @@ func (t *transaction) ModifyByConditionMap(model any, updated map[string]interfa
 
 // RemoveById 预设的删除功能 根据id或则ids删除
 // request 	传入一个model，则其主键必须指定 调用通过主键删除
-//			传入model切片(每个model需要指定主键) 批量通过主键删除
+//
+//	传入model切片(每个model需要指定主键) 批量通过主键删除
 func (t *transaction) RemoveById(condition any) *transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Delete(condition)
