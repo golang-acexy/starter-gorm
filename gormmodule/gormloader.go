@@ -1,7 +1,7 @@
 package gormmodule
 
 import (
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -67,7 +67,7 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 		DryRun:                                   g.DryRun,
 	}
 	if !g.UseDefaultLog {
-		config.Logger = &logrusLogger{log.Logrus()}
+		config.Logger = &logrusLogger{logger.Logrus()}
 	}
 	if g.TimeUTC {
 		config.NowFunc = func() time.Time {
@@ -81,7 +81,7 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	if interceptor != nil {
 		(*interceptor)(db)
 	}
-	log.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
+	logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 	go func() {
 		for {
 			s := sqlDb.Stats()
-			log.Logrus().Tracef("check db stats %+v", s)
+			logger.Logrus().Tracef("check db stats %+v", s)
 			if s.Idle == 0 && s.InUse == 0 && s.OpenConnections == 0 {
 				done <- true
 				return

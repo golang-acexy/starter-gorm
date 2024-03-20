@@ -13,11 +13,11 @@ var gModule *gormmodule.GormModule
 
 func init() {
 	gModule = &gormmodule.GormModule{
-		Username: "test",
-		Password: "test",
+		Username: "root",
+		Password: "root",
 		Database: "test",
 		Host:     "127.0.0.1",
-		Port:     3306,
+		Port:     13306,
 	}
 	moduleLoaders = []declaration.ModuleLoader{gModule}
 }
