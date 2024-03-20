@@ -9,7 +9,7 @@ import (
 
 func TestTransaction(t *testing.T) {
 
-	// 开启一个事务 该事务的每一步都将立即执行，通过tx.Execute() 最终抉择是否需要提交
+	// 开启一个事务 该事务的每一步都将立即执行单不会提交，通过tx.Execute() 最终抉择是否需要提交
 	tx := gormmodule.NewTransaction(false)
 
 	i := new([]Teacher)
@@ -42,29 +42,31 @@ func TestTransaction(t *testing.T) {
 		return 1, nil
 	})
 
-	// 移出单条
+	tx.Rollback()
+	// 移除单条
 	tx.RemoveById(Student{ID: 1})
 
-	// 移出多条
+	// 移除多条
 	tx.RemoveById([]Student{{ID: 1}, {ID: 2}})
 	tx.RemoveByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	// 执行事务
-	err := tx.Execute()
-
+	flag, err := tx.Execute()
+	fmt.Println(flag)
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 }
 
-func TestTransactionChain(t *testing.T) {
+func TestTransactionPrepare(t *testing.T) {
 
 	// 开启一个事务 该事务的每一步事务操作并不会立即执行 通过tx.Execute() 最终执行所有事务链步骤，并抉择是否提交
-	tx := gormmodule.NewTransactionChain(true)
+	tx := gormmodule.NewTransactionPrepare(true)
 
 	tx.Save(&Student{Name: "张三"})
 	teacher := &Teacher{Name: "王五"}
 	tx.Save(teacher)
+
 	fmt.Printf("由于此时tx.Save并没有执行，所以只能获取零值 teacher %+v\n", teacher)
 
 	queryTeacher := new(Teacher)
@@ -84,17 +86,37 @@ func TestTransactionChain(t *testing.T) {
 		return 1, nil
 	})
 
-	// 移出单条
+	// 移除单条
 	tx.RemoveById(Student{ID: 1})
 
-	// 移出多条
+	// 移除多条
 	tx.RemoveById([]Student{{ID: 1}, {ID: 2}})
 	tx.RemoveByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
 
-	// 执行事务
-	err := tx.Execute()
+	tx.Rollback()
 
+	// 执行事务
+	flag, err := tx.Execute()
+	fmt.Println(flag)
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
+}
+
+func TestTransactionPrepareRollback(t *testing.T) {
+	tx := gormmodule.NewTransactionPrepare(true)
+	tx.Save(&Student{Name: "张三"})
+	tx.Save(&Student{Name: "李四"})
+	tx.Rollback()
+	tx.Save(&Teacher{Name: "王五"})
+	fmt.Println(tx.Execute())
+}
+
+func TestTransactionRollback(t *testing.T) {
+	tx := gormmodule.NewTransaction(true)
+	tx.Save(&Student{Name: "张三"})
+	tx.Save(&Student{Name: "李四"})
+	tx.Rollback()
+	tx.Save(&Teacher{Name: "王五"})
+	fmt.Println(tx.Execute())
 }

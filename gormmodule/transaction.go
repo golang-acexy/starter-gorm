@@ -2,33 +2,40 @@ package gormmodule
 
 import (
 	"errors"
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"gorm.io/gorm"
 )
 
+const notInvokeRowFlag = -9999
+
 // DBExecutor 定义基础数据库执行函数类型
 // return 	int64: 受影响行数
-//			error: 任何异常将中断执行链并回滚整个事务
+//
+//	error: 任何异常将中断执行链并回滚整个事务
 type DBExecutor func(tx *gorm.DB) (int64, error)
 
-type transaction struct {
+type Transaction struct {
 	tx              *gorm.DB
 	executors       []DBExecutor
 	allowZeroAffRow bool // 是否允许SQL执行结果未影响任何记录 default false (zero will rollback)
 
-	execNow   bool
-	execRow   int64
-	execError error
-	canCommit bool
+	isPrepare        bool
+	execAffRow       int64
+	transactionError error
+	allowCommit      bool
 }
 
-// NewTransactionChain 创建一个新的事务执行链
-// 该事务的执行方式将在执行Execute统一执行所有预设的SQL过程，任何在操作事务链中交互的参数在立即获取时并不能获取操作后结果，仅在调用Execute后事务链才异常执行
-// allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0是回滚整个事务
-func NewTransactionChain(allowZeroAffRow ...bool) *transaction {
-	tx := &transaction{
-		tx:        db.Begin(),
-		executors: make([]DBExecutor, 0),
+// NewTransactionPrepare 创建一个新的事务预执行链
+// 该事务的执行方式将在执行Execute统一执行所有预设的DML过程
+// 任何在该事务链中的对数据库操作均处于预备执行阶段，仅在调用Execute后才全部执行
+// 整个事务链将在任何一个DML发生异常（或执行的结果不满足要求时）被标记为回滚，且在该事务链后面的DML操作将自动忽略执行
+// allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0时回滚整个事务
+func NewTransactionPrepare(allowZeroAffRow ...bool) *Transaction {
+	tx := &Transaction{
+		tx:          db.Begin(),
+		executors:   make([]DBExecutor, 0),
+		isPrepare:   true,
+		allowCommit: true,
 	}
 	if len(allowZeroAffRow) > 0 {
 		tx.allowZeroAffRow = allowZeroAffRow[0]
@@ -36,11 +43,14 @@ func NewTransactionChain(allowZeroAffRow ...bool) *transaction {
 	return tx
 }
 
-func NewTransaction(allowZeroAffRow ...bool) *transaction {
-	tx := &transaction{
-		tx:      db.Begin(),
-		execNow: true,
-		execRow: -999,
+// NewTransaction 创建一个事务执行链
+// 整个事务链将在任何一个DML发生异常（或执行的结果不满足要求时）被标记为回滚，且在该事务链后面的DML操作将自动忽略执行
+// allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0时回滚整个事务
+func NewTransaction(allowZeroAffRow ...bool) *Transaction {
+	tx := &Transaction{
+		tx:          db.Begin(),
+		execAffRow:  notInvokeRowFlag,
+		allowCommit: true,
 	}
 	if len(allowZeroAffRow) > 0 {
 		tx.allowZeroAffRow = allowZeroAffRow[0]
@@ -48,28 +58,46 @@ func NewTransaction(allowZeroAffRow ...bool) *transaction {
 	return tx
 }
 
-func (t *transaction) exec(f func(tx *gorm.DB) (int64, error)) {
-	if !t.execNow { // 如果非立即执行的模式，则保存到执行链中
+func (t *Transaction) exec(f func(tx *gorm.DB) (int64, error)) {
+	if t.isPrepare { // 如果预处理模式，则保存到执行链中
 		t.executors = append(t.executors, f)
 		return
 	}
-	if t.execError != nil {
-		t.canCommit = false
-		return
-	}
-	if t.execRow != -999 {
-		if !t.allowZeroAffRow && t.execRow <= 0 {
-			t.canCommit = false
+
+	if t.checkTransaction() {
+		t.execAffRow, t.transactionError = f(t.tx)
+		if t.transactionError != nil {
+			t.allowCommit = false
 			return
 		}
+		if t.execAffRow != notInvokeRowFlag {
+			if !t.allowZeroAffRow && t.execAffRow <= 0 {
+				t.allowCommit = false
+			}
+		}
 	}
-	t.canCommit = true
-	t.execRow, t.execError = f(t.tx)
+}
+
+func (t *Transaction) checkTransaction() bool {
+	if t.transactionError != nil {
+		t.allowCommit = false
+		return false
+	}
+	if t.execAffRow != notInvokeRowFlag {
+		if !t.allowZeroAffRow && t.execAffRow <= 0 {
+			t.allowCommit = false
+			return false
+		}
+	}
+	if !t.allowCommit {
+		return false
+	}
+	return true
 }
 
 // QueryById 通过Id查询数据
 // model对象指针，用于指定数据表&接收返回结果
-func (t *transaction) QueryById(model any, id any) *transaction {
+func (t *Transaction) QueryById(model any, id any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Find(model, id), true)
 	})
@@ -79,7 +107,7 @@ func (t *transaction) QueryById(model any, id any) *transaction {
 // QueryByCondition 通过Id查询数据
 // condition model非零参数条件
 // result 返回数据指针
-func (t *transaction) QueryByCondition(condition any, result any) *transaction {
+func (t *Transaction) QueryByCondition(condition any, result any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Model(condition).Where(condition).Scan(result), true)
 	})
@@ -90,7 +118,7 @@ func (t *transaction) QueryByCondition(condition any, result any) *transaction {
 // model	实体
 // condition 指定字段与值查询数据
 // result 返回数据指针
-func (t *transaction) QueryByConditionMap(model any, condition map[string]any, result any) *transaction {
+func (t *Transaction) QueryByConditionMap(model any, condition map[string]any, result any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Model(model).Where(condition).Scan(result), true)
 	})
@@ -98,7 +126,7 @@ func (t *transaction) QueryByConditionMap(model any, condition map[string]any, r
 }
 
 // Save 预设的保存功能 传入变量指针
-func (t *transaction) Save(entity any) *transaction {
+func (t *Transaction) Save(entity any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Save(entity)
 		if result.Error != nil {
@@ -111,8 +139,9 @@ func (t *transaction) Save(entity any) *transaction {
 
 // ModifyById 预设的更新功能 通过Id更新
 // request	condition 作为更新时条件 需要指定主键
-//			updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
-func (t *transaction) ModifyById(condition, updated any) *transaction {
+//
+//	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
+func (t *Transaction) ModifyById(condition, updated any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(condition).Updates(updated)
 		if result.Error != nil {
@@ -126,7 +155,7 @@ func (t *transaction) ModifyById(condition, updated any) *transaction {
 // ModifyByCondition 通过条件更新
 // updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
 // where sql部分条件 也可以是一个model非零参数条件
-func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *transaction {
+func (t *Transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(updated).Where(where, args...).Updates(updated)
 		if result.Error != nil {
@@ -139,8 +168,9 @@ func (t *transaction) ModifyByCondition(updated any, where interface{}, args ...
 
 // ModifyByConditionMap 通过条件更新
 // request	updated 作为需要更新数据 传入map[string]interface{}代替struct防止忽略零值
-//			where	sql部分条件 也可以是一个model非零参数条件
-func (t *transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *transaction {
+//
+//	where	sql部分条件 也可以是一个model非零参数条件
+func (t *Transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(model).Where(where, args...).Updates(updated)
 		if result.Error != nil {
@@ -153,8 +183,9 @@ func (t *transaction) ModifyByConditionMap(model any, updated map[string]interfa
 
 // RemoveById 预设的删除功能 根据id或则ids删除
 // request 	传入一个model，则其主键必须指定 调用通过主键删除
-//			传入model切片(每个model需要指定主键) 批量通过主键删除
-func (t *transaction) RemoveById(condition any) *transaction {
+//
+//	传入model切片(每个model需要指定主键) 批量通过主键删除
+func (t *Transaction) RemoveById(condition any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Delete(condition)
 		if result.Error != nil {
@@ -166,7 +197,7 @@ func (t *transaction) RemoveById(condition any) *transaction {
 }
 
 // RemoveByCondition 预设删除功能 根据条件删除
-func (t *transaction) RemoveByCondition(model any, where interface{}, args ...interface{}) *transaction {
+func (t *Transaction) RemoveByCondition(model any, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Where(where, args...).Delete(model)
 		if result.Error != nil {
@@ -178,7 +209,7 @@ func (t *transaction) RemoveByCondition(model any, where interface{}, args ...in
 }
 
 // Customize 执行自定义的SQL逻辑
-func (t *transaction) Customize(executors ...DBExecutor) *transaction {
+func (t *Transaction) Customize(executors ...DBExecutor) *Transaction {
 	if len(executors) > 0 {
 		for _, v := range executors {
 			t.exec(v)
@@ -187,55 +218,57 @@ func (t *transaction) Customize(executors ...DBExecutor) *transaction {
 	return t
 }
 
+// Rollback 回滚事务
+func (t *Transaction) Rollback() {
+	t.exec(func(tx *gorm.DB) (int64, error) {
+		t.allowCommit = false
+		return notInvokeRowFlag, tx.Error
+	})
+}
+
 // Execute 执行所有装载的SQL链
-func (t *transaction) Execute() error {
-	if t.execNow {
-		if t.canCommit {
+// bool true: committed false: rolled back
+func (t *Transaction) Execute() (bool, error) {
+	if !t.isPrepare {
+		if t.allowCommit {
 			rs := t.tx.Commit()
 			if rs.Error != nil {
 				t.tx.Rollback()
-				log.Logrus().Errorln("transaction commit error, exec rollback")
-				return rs.Error
+				logger.Logrus().Errorln("transaction commit error, exec rollback")
+				return false, rs.Error
 			}
-			log.Logrus().Traceln("transaction commit")
+			logger.Logrus().Traceln("transaction commit")
+			return true, t.transactionError
 		} else {
-			if t.execError != nil {
-				log.Logrus().WithError(t.execError).Error("rollback by error")
-				t.tx.Rollback()
-				return t.execError
-			}
-			if !t.allowZeroAffRow && t.execRow == 0 {
-				t.tx.Rollback()
-				err := errors.New("the execution result does not meet expectations")
-				log.Logrus().WithError(err).Error("rollback by error")
-				return err
-			}
+			rs := t.tx.Rollback()
+			logger.Logrus().Warn("transaction rollback")
+			return false, rs.Error
 		}
 	} else {
 		if len(t.executors) == 0 {
-			return errors.New("no executors")
+			return false, errors.New("no executors")
 		}
 		for _, f := range t.executors {
-			rows, err := f(t.tx)
-			if err != nil {
-				log.Logrus().WithError(err).Error("rollback by error")
+			if t.checkTransaction() {
+				t.execAffRow, t.transactionError = f(t.tx)
+				if t.transactionError != nil {
+					t.tx.Rollback()
+					logger.Logrus().Warn("transaction rollback")
+					return false, t.transactionError
+				}
+				if t.execAffRow != notInvokeRowFlag {
+					if !t.allowZeroAffRow && t.execAffRow <= 0 {
+						t.tx.Rollback()
+						return false, t.tx.Error
+					}
+				}
+			} else {
 				t.tx.Rollback()
-				return err
-			}
-			if !t.allowZeroAffRow && rows == 0 {
-				t.tx.Rollback()
-				err = errors.New("the execution result does not meet expectations")
-				log.Logrus().WithError(err).Error("rollback by error")
-				return err
+				logger.Logrus().Warn("transaction rollback")
+				return false, t.tx.Error
 			}
 		}
 		rs := t.tx.Commit()
-		if rs.Error != nil {
-			t.tx.Rollback()
-			log.Logrus().Errorln("transaction commit error, exec rollback")
-			return rs.Error
-		}
-		log.Logrus().Traceln("transaction commit")
+		return true, rs.Error
 	}
-	return nil
 }
