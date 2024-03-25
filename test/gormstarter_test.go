@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/golang-acexy/starter-gorm/gormmodule"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"testing"
 	"time"
 )
@@ -18,6 +20,10 @@ func init() {
 		Database: "test",
 		Host:     "127.0.0.1",
 		Port:     13306,
+		GormInterceptor: func(instance interface{}) {
+			raw := instance.(*gorm.DB)
+			raw.Logger.LogMode(logger.Info)
+		},
 	}
 	moduleLoaders = []declaration.ModuleLoader{gModule}
 }
