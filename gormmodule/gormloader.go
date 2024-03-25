@@ -36,7 +36,7 @@ type GormModule struct {
 	UseDefaultLog bool
 
 	GormModuleConfig *declaration.ModuleConfig
-	GormInterceptor  *func(instance interface{})
+	GormInterceptor  func(instance interface{})
 }
 
 func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
@@ -48,19 +48,11 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterPriority:       20,
 		UnregisterAllowAsync:     false,
 		UnregisterMaxWaitSeconds: 30,
+		LoadInterceptor:          g.GormInterceptor,
 	}
 }
 
-// Interceptor 初始化gorm DB实例拦截器
-// request instance: *gorm.DB
-func (g *GormModule) Interceptor() *func(instance interface{}) {
-	if g.GormInterceptor != nil {
-		return g.GormInterceptor
-	}
-	return nil
-}
-
-func (g *GormModule) Register(interceptor *func(instance interface{})) error {
+func (g *GormModule) Register() (interface{}, error) {
 	var err error
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
@@ -76,13 +68,10 @@ func (g *GormModule) Register(interceptor *func(instance interface{})) error {
 	}
 	db, err = gorm.Open(mysql.Open(g.toDsn()), config)
 	if err != nil {
-		return err
-	}
-	if interceptor != nil {
-		(*interceptor)(db)
+		return nil, err
 	}
 	logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
-	return nil
+	return db, nil
 }
 
 func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
