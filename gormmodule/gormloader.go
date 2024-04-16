@@ -7,6 +7,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,6 +31,8 @@ type GromConfig struct {
 	TimeUTC       bool // true: create/update UTC time; false LOCAL time
 	DryRun        bool // create sql not exec
 	UseDefaultLog bool
+
+	UrlParam string // more Param such as `allowNativePasswords=false&checkConnLiveness=false`  https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
 }
 
 type GormModule struct {
@@ -127,6 +130,11 @@ func (g *GormModule) toDsn() string {
 	builder := str.NewBuilder(g.GromConfig.Username + ":" + g.GromConfig.Password + "@tcp(" + g.GromConfig.Host + ":" + strconv.Itoa(int(g.GromConfig.Port)) + ")/" + g.GromConfig.Database)
 	builder.WriteString("?charset=" + g.GromConfig.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
+	if g.GromConfig.UrlParam != "" {
+		if strings.HasPrefix(g.GromConfig.UrlParam, "&") || strings.HasPrefix(g.GromConfig.UrlParam, "?") {
+			builder.WriteString("&" + str.Substring(g.GromConfig.UrlParam, 1, str.CharLength(g.GromConfig.UrlParam)))
+		}
+	}
 	return builder.ToString()
 }
 
