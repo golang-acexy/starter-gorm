@@ -20,9 +20,8 @@ func init() {
 		Database: "test",
 		Host:     "127.0.0.1",
 		Port:     13306,
-		GormInterceptor: func(instance interface{}) {
-			raw := instance.(*gorm.DB)
-			raw.Logger.LogMode(logger.Info)
+		GormInterceptor: func(instance *gorm.DB) {
+			instance.Logger.LogMode(logger.Info)
 		},
 	}
 	moduleLoaders = []declaration.ModuleLoader{gModule}

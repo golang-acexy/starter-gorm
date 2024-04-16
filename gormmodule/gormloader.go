@@ -17,9 +17,6 @@ var db *gorm.DB
 const (
 	defaultCharset = "utf8mb4"
 )
-const (
-	DBTypeMySQL = "mysql"
-)
 
 type GormModule struct {
 	Username string
@@ -29,14 +26,13 @@ type GormModule struct {
 	Database string
 
 	Charset string // default charset : utf8mb4
-	DBType  DBType // only mysql now
 
 	TimeUTC       bool // true: create/update UTC time; false LOCAL time
 	DryRun        bool // create sql not exec
 	UseDefaultLog bool
 
 	GormModuleConfig *declaration.ModuleConfig
-	GormInterceptor  func(instance interface{})
+	GormInterceptor  func(instance *gorm.DB)
 }
 
 func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
@@ -48,7 +44,11 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterPriority:       20,
 		UnregisterAllowAsync:     false,
 		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor:          g.GormInterceptor,
+		LoadInterceptor: func(instance interface{}) {
+			if g.GormInterceptor != nil {
+				g.GormInterceptor(instance.(*gorm.DB))
+			}
+		},
 	}
 }
 
@@ -109,19 +109,13 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 }
 
 func (g *GormModule) toDsn() string {
-	if g.DBType == "" {
-		g.DBType = DBTypeMySQL
-	}
 	if g.Charset == "" {
 		g.Charset = defaultCharset
 	}
 	var builder strings.Builder
-	switch g.DBType {
-	case DBTypeMySQL:
-		builder.WriteString(g.Username + ":" + g.Password + "@tcp(" + g.Host + ":" + strconv.Itoa(int(g.Port)) + ")/" + g.Database)
-		builder.WriteString("?charset=" + g.Charset)
-		builder.WriteString("&parseTime=True") // support time.Time
-	}
+	builder.WriteString(g.Username + ":" + g.Password + "@tcp(" + g.Host + ":" + strconv.Itoa(int(g.Port)) + ")/" + g.Database)
+	builder.WriteString("?charset=" + g.Charset)
+	builder.WriteString("&parseTime=True") // support time.Time
 	return builder.String()
 }
 
