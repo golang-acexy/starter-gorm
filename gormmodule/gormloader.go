@@ -83,7 +83,6 @@ func (g *GormModule) Register() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 	return db, nil
 }
 
