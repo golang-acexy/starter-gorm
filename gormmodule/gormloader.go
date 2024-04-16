@@ -18,7 +18,7 @@ const (
 	defaultCharset = "utf8mb4"
 )
 
-type GormModule struct {
+type GromConfig struct {
 	Username string
 	Password string
 	Host     string
@@ -30,6 +30,15 @@ type GormModule struct {
 	TimeUTC       bool // true: create/update UTC time; false LOCAL time
 	DryRun        bool // create sql not exec
 	UseDefaultLog bool
+}
+
+type GormModule struct {
+
+	// GromConfig 配置
+	GromConfig GromConfig
+
+	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
+	LazyGromConfig func() GromConfig
 
 	GormModuleConfig *declaration.ModuleConfig
 	GormInterceptor  func(instance *gorm.DB)
@@ -54,14 +63,18 @@ func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
 
 func (g *GormModule) Register() (interface{}, error) {
 	var err error
+	if g.LazyGromConfig != nil {
+		g.GromConfig = g.LazyGromConfig()
+	}
+
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
-		DryRun:                                   g.DryRun,
+		DryRun:                                   g.GromConfig.DryRun,
 	}
-	if !g.UseDefaultLog {
+	if !g.GromConfig.UseDefaultLog {
 		config.Logger = &logrusLogger{logger.Logrus()}
 	}
-	if g.TimeUTC {
+	if g.GromConfig.TimeUTC {
 		config.NowFunc = func() time.Time {
 			return time.Now().UTC()
 		}
@@ -109,11 +122,11 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 }
 
 func (g *GormModule) toDsn() string {
-	if g.Charset == "" {
-		g.Charset = defaultCharset
+	if g.GromConfig.Charset == "" {
+		g.GromConfig.Charset = defaultCharset
 	}
-	builder := str.NewBuilder(g.Username + ":" + g.Password + "@tcp(" + g.Host + ":" + strconv.Itoa(int(g.Port)) + ")/" + g.Database)
-	builder.WriteString("?charset=" + g.Charset)
+	builder := str.NewBuilder(g.GromConfig.Username + ":" + g.GromConfig.Password + "@tcp(" + g.GromConfig.Host + ":" + strconv.Itoa(int(g.GromConfig.Port)) + ")/" + g.GromConfig.Database)
+	builder.WriteString("?charset=" + g.GromConfig.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
 	return builder.ToString()
 }
