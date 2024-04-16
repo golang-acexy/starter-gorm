@@ -10,7 +10,7 @@ import (
 func TestTransaction(t *testing.T) {
 
 	// 开启一个事务 该事务的每一步都将立即执行单不会提交，通过tx.Execute() 最终抉择是否需要提交
-	tx := gormmodule.NewTransaction(false)
+	tx := gormmodule.NewTransaction(true)
 
 	i := new([]Teacher)
 	tx.QueryByCondition(Teacher{Name: "王五"}, i)
@@ -42,7 +42,7 @@ func TestTransaction(t *testing.T) {
 		return 1, nil
 	})
 
-	tx.Rollback()
+	//tx.Rollback()
 	// 移除单条
 	tx.RemoveById(Student{ID: 1})
 

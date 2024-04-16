@@ -2,11 +2,11 @@ package gormmodule
 
 import (
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/str"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -112,11 +112,10 @@ func (g *GormModule) toDsn() string {
 	if g.Charset == "" {
 		g.Charset = defaultCharset
 	}
-	var builder strings.Builder
-	builder.WriteString(g.Username + ":" + g.Password + "@tcp(" + g.Host + ":" + strconv.Itoa(int(g.Port)) + ")/" + g.Database)
+	builder := str.NewBuilder(g.Username + ":" + g.Password + "@tcp(" + g.Host + ":" + strconv.Itoa(int(g.Port)) + ")/" + g.Database)
 	builder.WriteString("?charset=" + g.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
-	return builder.String()
+	return builder.ToString()
 }
 
 func RawDB() *gorm.DB {

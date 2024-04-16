@@ -39,7 +39,7 @@ func TestModifyByCondition(t *testing.T) {
 func TestQueryById(t *testing.T) {
 	bm := TeacherMapper{}
 	var teacher Teacher
-	bm.QueryById(4, &teacher)
+	fmt.Println(bm.QueryById(1, &teacher))
 	fmt.Println(teacher)
 }
 
@@ -54,5 +54,25 @@ func TestQueryByConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	bm.QueryByConditionMap(map[string]any{"sex": 0}, teachers)
-	fmt.Println(teachers)
+	for _, teacher := range *teachers {
+		fmt.Printf("%+v\n", *teacher)
+	}
+}
+
+func TestPageCondition(t *testing.T) {
+	bm := TeacherMapper{}
+	teachers := new([]*Teacher)
+	fmt.Println(bm.PageCondition(Teacher{Name: "mapper"}, 3, 2, teachers))
+	for _, teacher := range *teachers {
+		fmt.Printf("%+v\n", *teacher)
+	}
+}
+
+func TestPageConditionMap(t *testing.T) {
+	bm := TeacherMapper{}
+	teachers := new([]*Teacher)
+	fmt.Println(bm.PageConditionMap(map[string]any{"sex": 0}, 2, 2, teachers))
+	for _, teacher := range *teachers {
+		fmt.Printf("%+v\n", *teacher)
+	}
 }
