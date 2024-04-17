@@ -15,11 +15,16 @@ var gModule *gormmodule.GormModule
 
 func init() {
 	gModule = &gormmodule.GormModule{
-		Username: "root",
-		Password: "root",
-		Database: "test",
-		Host:     "127.0.0.1",
-		Port:     13306,
+		LazyGromConfig: func() gormmodule.GromConfig {
+			return gormmodule.GromConfig{
+				Username: "root",
+				Password: "root",
+				Database: "test",
+				Host:     "127.0.0.1",
+				Port:     13306,
+			}
+		},
+
 		GormInterceptor: func(instance *gorm.DB) {
 			instance.Logger.LogMode(logger.Info)
 		},
