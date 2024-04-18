@@ -44,35 +44,35 @@ func (b *BaseMapper[T]) QueryByConditionMap(condition map[string]any, result *[]
 }
 
 // PageCondition 通过指定的非零值条件分页查询
-func (b *BaseMapper[T]) PageCondition(condition T, pageNumber, pageSize int, result *[]*T) (count int64, err error) {
-	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Count(&count))
+func (b *BaseMapper[T]) PageCondition(condition T, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
+	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
 	}
-	if count <= 0 {
+	if total <= 0 {
 		return 0, nil
 	}
 	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
-	return count, nil
+	return total, nil
 }
 
 // PageConditionMap 通过指定字段与值查询数据分页查询  解决零值条件问题
-func (b *BaseMapper[T]) PageConditionMap(condition map[string]any, pageNumber, pageSize int, result *[]*T) (count int64, err error) {
-	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Count(&count))
+func (b *BaseMapper[T]) PageConditionMap(condition map[string]any, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
+	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
 	}
-	if count <= 0 {
+	if total <= 0 {
 		return 0, nil
 	}
 	_, err = checkResult(db.Table(b.Value.TableName()).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
-	return count, nil
+	return total, nil
 }
 
 // Save 保存数据
