@@ -10,6 +10,32 @@ func TestBaseSave(t *testing.T) {
 	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
 	fmt.Println(bm.Save(&teacher))
 	fmt.Println("saved id", teacher.ID)
+
+	// 测试自动保存0值
+	teacher1 := Teacher{Sex: 1}
+	fmt.Println(bm.Save(&teacher1))
+	fmt.Println("saved id", teacher1.ID)
+
+	// 测试排除指定的字段
+	teacher3 := Teacher{Sex: 1}
+	fmt.Println(bm.Save(&teacher3, "name"))
+	fmt.Println("saved id", teacher3.ID)
+
+	// 测试主键冲突
+	teacher4 := Teacher{
+		Sex: 1,
+	}
+	teacher4.ID = 16
+	fmt.Println(bm.Save(&teacher4, "name"))
+	fmt.Println("saved id", teacher4.ID)
+
+	// updateAndUpdate
+	teacher5 := Teacher{
+		Sex:  1,
+		Name: "name",
+	}
+	fmt.Println(bm.SaveOrUpdate(&teacher5, "create_time"))
+	fmt.Println("saved id", teacher5.ID)
 }
 
 func TestModifyById(t *testing.T) {
