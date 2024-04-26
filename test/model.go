@@ -24,7 +24,7 @@ func (Student) TableName() string {
 type Teacher struct {
 	gormmodule.BaseModel[uint64]
 	CreatedAt time.Time `gorm:"column:create_time" gorm:"<-:create" json:"createTime"`
-	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:false" json:"updateTime"`
+	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:update" json:"updateTime"`
 	Name      string
 	Sex       uint
 	Age       uint

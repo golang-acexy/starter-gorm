@@ -75,9 +75,26 @@ func (b *BaseMapper[T]) PageConditionMap(condition map[string]any, pageNumber, p
 	return total, nil
 }
 
-// Save 保存数据
-func (b *BaseMapper[T]) Save(entity *T) (int64, error) {
-	return checkResult(db.Save(entity))
+// Save 保存数据 零值也将参与保存
+//
+//	exclude 手动指定需要排除的字段
+func (b *BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error) {
+	var tx = db
+	if len(excludeColumns) > 0 {
+		tx = tx.Omit(excludeColumns...)
+	}
+	return checkResult(tx.Create(entity))
+}
+
+// SaveOrUpdate 保存/更新数据 零值也将参与保存
+//
+//	exclude 手动指定需要排除的字段(如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
+func (b *BaseMapper[T]) SaveOrUpdate(entity *T, excludeColumns ...string) (int64, error) {
+	var tx = db
+	if len(excludeColumns) > 0 {
+		tx = tx.Omit(excludeColumns...)
+	}
+	return checkResult(tx.Save(entity))
 }
 
 // ModifyById 通过ID更新非零值字段
