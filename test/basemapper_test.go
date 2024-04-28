@@ -38,6 +38,14 @@ func TestBaseSave(t *testing.T) {
 	fmt.Println("saved id", teacher5.ID)
 }
 
+func TestBatch(t *testing.T) {
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
+	teacher1 := Teacher{Sex: 1}
+	v := []*Teacher{&teacher, &teacher1}
+	bm := TeacherMapper{}
+	bm.SaveBatch(&v, "create_time")
+
+}
 func TestModifyById(t *testing.T) {
 	bm := TeacherMapper{}
 	updated := Teacher{Name: "update", Age: 21, Sex: 0}
@@ -50,9 +58,19 @@ func TestModifyMapById(t *testing.T) {
 	fmt.Println(bm.ModifyMapById(132, map[string]any{"name": "Miss A", "sex": 0}))
 }
 
+func TestModifyByWhere(t *testing.T) {
+	bm := TeacherMapper{}
+	fmt.Println(bm.ModifyByWhere(Teacher{Name: "Alex"}, "name = ? and age > ?", "mapper", 5))
+}
+
 func TestRemoveById(t *testing.T) {
 	bm := TeacherMapper{}
 	fmt.Println(bm.RemoveById(1))
+}
+
+func TestRemoveByWhere(t *testing.T) {
+	bm := TeacherMapper{}
+	fmt.Println(bm.RemoveByWhere("name = ? and age > ?", "Alex", 5))
 }
 
 func TestModifyByCondition(t *testing.T) {
@@ -73,6 +91,13 @@ func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	bm.QueryByCondition(Teacher{Name: "王五", Sex: 1}, teachers)
+	fmt.Println(teachers)
+}
+
+func TestQueryByWhere(t *testing.T) {
+	bm := TeacherMapper{}
+	teachers := new([]*Teacher)
+	bm.QueryByWhere("name =? and age > ?", teachers, "mapper", 5)
 	fmt.Println(teachers)
 }
 
