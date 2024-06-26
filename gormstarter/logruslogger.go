@@ -1,4 +1,4 @@
-package gormmodule
+package gormstarter
 
 import (
 	"context"

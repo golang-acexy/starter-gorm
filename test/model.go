@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/golang-acexy/starter-gorm/gormmodule"
+	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"time"
 )
 
@@ -22,7 +22,7 @@ func (Student) TableName() string {
 
 // Teacher 继承BaseModel 并实现 IBaseModel
 type Teacher struct {
-	gormmodule.BaseModel[uint64]
+	gormstarter.BaseModel[uint64]
 	CreatedAt time.Time `gorm:"column:create_time" gorm:"<-:create" json:"createTime"`
 	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:update" json:"updateTime"`
 	Name      string
@@ -36,5 +36,5 @@ func (Teacher) TableName() string {
 
 // TeacherMapper 声明Teacher 获取基于BaseMapper的能力
 type TeacherMapper struct {
-	gormmodule.BaseMapper[Teacher]
+	gormstarter.BaseMapper[Teacher]
 }

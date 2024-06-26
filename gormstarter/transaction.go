@@ -1,4 +1,4 @@
-package gormmodule
+package gormstarter
 
 import (
 	"errors"
@@ -32,7 +32,7 @@ type Transaction struct {
 // allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0时回滚整个事务
 func NewTransactionPrepare(allowZeroAffRow ...bool) *Transaction {
 	tx := &Transaction{
-		tx:          db.Begin(),
+		tx:          gormDB.Begin(),
 		executors:   make([]DBExecutor, 0),
 		isPrepare:   true,
 		allowCommit: true,
@@ -48,7 +48,7 @@ func NewTransactionPrepare(allowZeroAffRow ...bool) *Transaction {
 // allowZeroAffRow 是否允许执行影响行数为0 如果为false 则遇到执行行数为0时回滚整个事务
 func NewTransaction(allowZeroAffRow ...bool) *Transaction {
 	tx := &Transaction{
-		tx:          db.Begin(),
+		tx:          gormDB.Begin(),
 		execAffRow:  notInvokeRowFlag,
 		allowCommit: true,
 	}

@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"github.com/golang-acexy/starter-gorm/gormmodule"
+	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"gorm.io/gorm"
 	"testing"
 )
@@ -10,7 +10,7 @@ import (
 func TestTransaction(t *testing.T) {
 
 	// 开启一个事务 该事务的每一步都将立即执行单不会提交，通过tx.Execute() 最终抉择是否需要提交
-	tx := gormmodule.NewTransaction(true)
+	tx := gormstarter.NewTransaction(true)
 
 	i := new([]Teacher)
 	tx.QueryByCondition(Teacher{Name: "王五"}, i)
@@ -61,7 +61,7 @@ func TestTransaction(t *testing.T) {
 func TestTransactionPrepare(t *testing.T) {
 
 	// 开启一个事务 该事务的每一步事务操作并不会立即执行 通过tx.Execute() 最终执行所有事务链步骤，并抉择是否提交
-	tx := gormmodule.NewTransactionPrepare(true)
+	tx := gormstarter.NewTransactionPrepare(true)
 
 	tx.Save(&Student{Name: "张三"})
 	teacher := &Teacher{Name: "王五"}
@@ -104,7 +104,7 @@ func TestTransactionPrepare(t *testing.T) {
 }
 
 func TestTransactionPrepareRollback(t *testing.T) {
-	tx := gormmodule.NewTransactionPrepare(true)
+	tx := gormstarter.NewTransactionPrepare(true)
 	tx.Save(&Student{Name: "张三"})
 	tx.Save(&Student{Name: "李四"})
 	tx.Rollback()
@@ -113,10 +113,9 @@ func TestTransactionPrepareRollback(t *testing.T) {
 }
 
 func TestTransactionRollback(t *testing.T) {
-	tx := gormmodule.NewTransaction(true)
+	tx := gormstarter.NewTransaction(true)
 	tx.Save(&Student{Name: "张三"})
 	tx.Save(&Student{Name: "李四"})
-	tx.Rollback()
 	tx.Save(&Teacher{Name: "王五"})
 	fmt.Println(tx.Execute())
 }
