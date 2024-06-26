@@ -2,45 +2,45 @@ package test
 
 import (
 	"fmt"
-	"github.com/golang-acexy/starter-gorm/gormmodule"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/golang-acexy/starter-gorm/gormstarter"
+	"github.com/golang-acexy/starter-parent/parent"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"testing"
 	"time"
 )
 
-var moduleLoaders []declaration.ModuleLoader
-var gModule *gormmodule.GormModule
+var starterLoader *parent.StarterLoader
 
 func init() {
-	gModule = &gormmodule.GormModule{
-		LazyGromConfig: func() gormmodule.GromConfig {
-			return gormmodule.GromConfig{
-				Username: "root",
-				Password: "root",
-				Database: "test",
-				Host:     "127.0.0.1",
-				Port:     13306,
-			}
-		},
+	starterLoader = parent.NewStarterLoader([]parent.Starter{
+		&gormstarter.GormStarter{
+			LazyGromConfig: func() gormstarter.GromConfig {
+				return gormstarter.GromConfig{
+					Username: "root",
+					Password: "root",
+					Database: "test",
+					Host:     "127.0.0.1",
+					Port:     13306,
+				}
+			},
 
-		GormInterceptor: func(instance *gorm.DB) {
-			instance.Logger.LogMode(logger.Info)
+			InitFunc: func(instance *gorm.DB) {
+				instance.Logger.LogMode(logger.Info)
+			},
 		},
-	}
-	moduleLoaders = []declaration.ModuleLoader{gModule}
+	})
 }
 
 func TestRegisterGorm(t *testing.T) {
 
-	m := declaration.Module{ModuleLoaders: moduleLoaders}
-	err := m.Load()
+	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	db := gormmodule.RawDB()
+	db := gormstarter.RawGormDB()
 
 	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
 	go func() {
@@ -58,7 +58,11 @@ func TestRegisterGorm(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(7 * time.Second)
-	r := m.Unload(10)
-	fmt.Printf("%+v\n", r)
+	time.Sleep(3 * time.Second)
+	stopResult, err := starterLoader.Stop(time.Second * 10)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	fmt.Println(json.ToJsonFormat(stopResult))
 }

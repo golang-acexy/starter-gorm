@@ -1,9 +1,11 @@
-package gormmodule
+package gormstarter
 
 import (
+	"context"
+	"database/sql"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/str"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/golang-acexy/starter-parent/parent"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strconv"
@@ -13,7 +15,7 @@ import (
 
 type DBType string
 
-var db *gorm.DB
+var gormDB *gorm.DB
 
 const (
 	defaultCharset = "utf8mb4"
@@ -35,7 +37,7 @@ type GromConfig struct {
 	UrlParam string // more Param such as `allowNativePasswords=false&checkConnLiveness=false`  https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
 }
 
-type GormModule struct {
+type GormStarter struct {
 
 	// GromConfig 配置
 	GromConfig GromConfig
@@ -43,33 +45,26 @@ type GormModule struct {
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
 	LazyGromConfig func() GromConfig
 
-	GormModuleConfig *declaration.ModuleConfig
-	GormInterceptor  func(instance *gorm.DB)
+	GormSetting *parent.Setting
+	InitFunc    func(instance *gorm.DB)
 }
 
-func (g *GormModule) ModuleConfig() *declaration.ModuleConfig {
-	if g.GormModuleConfig != nil {
-		return g.GormModuleConfig
+func (g *GormStarter) Setting() *parent.Setting {
+	if g.GormSetting != nil {
+		return g.GormSetting
 	}
-	return &declaration.ModuleConfig{
-		ModuleName:               "Gorm",
-		UnregisterPriority:       20,
-		UnregisterAllowAsync:     false,
-		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor: func(instance interface{}) {
-			if g.GormInterceptor != nil {
-				g.GormInterceptor(instance.(*gorm.DB))
-			}
-		},
-	}
+	return parent.NewSetting("Gorm-Starter", 20, false, time.Second*30, func(instance interface{}) {
+		if g.InitFunc != nil {
+			g.InitFunc(instance.(*gorm.DB))
+		}
+	})
 }
 
-func (g *GormModule) Register() (interface{}, error) {
+func (g *GormStarter) Start() (interface{}, error) {
 	var err error
 	if g.LazyGromConfig != nil {
 		g.GromConfig = g.LazyGromConfig()
 	}
-
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   g.GromConfig.DryRun,
@@ -82,32 +77,49 @@ func (g *GormModule) Register() (interface{}, error) {
 			return time.Now().UTC()
 		}
 	}
-	db, err = gorm.Open(mysql.Open(g.toDsn()), config)
+	gormDB, err = gorm.Open(mysql.Open(g.toDsn()), config)
 	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	sqlDb, err := gormDB.DB()
+	if err != nil {
+		return nil, err
+	}
+	return gormDB, g.ping(sqlDb)
 }
 
-func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	sqlDb, err := db.DB()
-	if err != nil {
-		return false, err
+func (g *GormStarter) ping(sqlDb *sql.DB) error {
+	if sqlDb == nil {
+		return nil
 	}
+	return sqlDb.Ping()
+}
 
+func (g *GormStarter) closedAllConn(sqlDb *sql.DB) bool {
+	if sqlDb == nil {
+		return true
+	}
+	s := sqlDb.Stats()
+	if s.Idle == 0 && s.InUse == 0 && s.OpenConnections == 0 {
+		return true
+	}
+	return false
+}
+
+func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	sqlDb, err := gormDB.DB()
+	if err != nil {
+		return false, g.ping(sqlDb) != nil, err
+	}
 	err = sqlDb.Close()
 	if err != nil {
-		return false, err
+		return false, g.ping(sqlDb) != nil, err
 	}
-
-	done := make(chan bool)
-
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	go func() {
 		for {
-			s := sqlDb.Stats()
-			logger.Logrus().Tracef("check db stats %+v", s)
-			if s.Idle == 0 && s.InUse == 0 && s.OpenConnections == 0 {
-				done <- true
+			if g.closedAllConn(sqlDb) {
+				cancelFunc()
 				return
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -115,19 +127,23 @@ func (g *GormModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error
 	}()
 
 	select {
-	case <-done:
+	case <-ctx.Done():
+		stopped = g.ping(sqlDb) != nil
 		gracefully = true
-	case <-time.After(time.Second * time.Duration(maxWaitSeconds)):
+	case <-time.After(maxWaitTime):
+		stopped = g.ping(sqlDb) != nil
 		gracefully = false
 	}
 	return
 }
 
-func (g *GormModule) toDsn() string {
+func (g *GormStarter) toDsn() string {
 	if g.GromConfig.Charset == "" {
 		g.GromConfig.Charset = defaultCharset
 	}
-	builder := str.NewBuilder(g.GromConfig.Username + ":" + g.GromConfig.Password + "@tcp(" + g.GromConfig.Host + ":" + strconv.Itoa(int(g.GromConfig.Port)) + ")/" + g.GromConfig.Database)
+	builder := str.NewBuilder(g.GromConfig.Username)
+	builder.WriteString(":").WriteString(g.GromConfig.Password).WriteString("@tcp(").WriteString(g.GromConfig.Host).WriteString(":").WriteString(strconv.Itoa(int(g.GromConfig.Port)))
+	builder.WriteString(")/").WriteString(g.GromConfig.Database)
 	builder.WriteString("?charset=" + g.GromConfig.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
 	if g.GromConfig.UrlParam != "" {
@@ -138,6 +154,6 @@ func (g *GormModule) toDsn() string {
 	return builder.ToString()
 }
 
-func RawDB() *gorm.DB {
-	return db
+func RawGormDB() *gorm.DB {
+	return gormDB
 }
