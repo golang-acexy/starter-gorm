@@ -65,7 +65,6 @@ func (g *GormStarter) Start() (interface{}, error) {
 	if g.LazyGromConfig != nil {
 		g.GromConfig = g.LazyGromConfig()
 	}
-
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   g.GromConfig.DryRun,
@@ -82,17 +81,18 @@ func (g *GormStarter) Start() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gormDB, nil
+	sqlDb, err := gormDB.DB()
+	if err != nil {
+		return nil, err
+	}
+	return gormDB, g.ping(sqlDb)
 }
 
-func (g *GormStarter) isClosed(sqlDb *sql.DB) bool {
+func (g *GormStarter) ping(sqlDb *sql.DB) error {
 	if sqlDb == nil {
-		return true
+		return nil
 	}
-	if pingErr := sqlDb.Ping(); pingErr != nil {
-		return true
-	}
-	return false
+	return sqlDb.Ping()
 }
 
 func (g *GormStarter) closedAllConn(sqlDb *sql.DB) bool {
@@ -100,7 +100,6 @@ func (g *GormStarter) closedAllConn(sqlDb *sql.DB) bool {
 		return true
 	}
 	s := sqlDb.Stats()
-
 	if s.Idle == 0 && s.InUse == 0 && s.OpenConnections == 0 {
 		return true
 	}
@@ -110,11 +109,11 @@ func (g *GormStarter) closedAllConn(sqlDb *sql.DB) bool {
 func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
 	sqlDb, err := gormDB.DB()
 	if err != nil {
-		return false, g.isClosed(sqlDb), err
+		return false, g.ping(sqlDb) != nil, err
 	}
 	err = sqlDb.Close()
 	if err != nil {
-		return false, g.isClosed(sqlDb), err
+		return false, g.ping(sqlDb) != nil, err
 	}
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	go func() {
@@ -129,10 +128,10 @@ func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 
 	select {
 	case <-ctx.Done():
-		stopped = g.isClosed(sqlDb)
+		stopped = g.ping(sqlDb) != nil
 		gracefully = true
 	case <-time.After(maxWaitTime):
-		stopped = g.isClosed(sqlDb)
+		stopped = g.ping(sqlDb) != nil
 		gracefully = false
 	}
 	return
@@ -142,7 +141,9 @@ func (g *GormStarter) toDsn() string {
 	if g.GromConfig.Charset == "" {
 		g.GromConfig.Charset = defaultCharset
 	}
-	builder := str.NewBuilder(g.GromConfig.Username + ":" + g.GromConfig.Password + "@tcp(" + g.GromConfig.Host + ":" + strconv.Itoa(int(g.GromConfig.Port)) + ")/" + g.GromConfig.Database)
+	builder := str.NewBuilder(g.GromConfig.Username)
+	builder.WriteString(":").WriteString(g.GromConfig.Password).WriteString("@tcp(").WriteString(g.GromConfig.Host).WriteString(":").WriteString(strconv.Itoa(int(g.GromConfig.Port)))
+	builder.WriteString(")/").WriteString(g.GromConfig.Database)
 	builder.WriteString("?charset=" + g.GromConfig.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
 	if g.GromConfig.UrlParam != "" {
