@@ -34,7 +34,7 @@ func (b *BaseMapper[T]) QueryById(id any, result *T) (int64, error) {
 }
 
 // QueryOneByCondition 通过非零条件查询
-func (b *BaseMapper[T]) QueryOneByCondition(condition T, result *T) (int64, error) {
+func (b *BaseMapper[T]) QueryOneByCondition(condition *T, result *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
 }
 
@@ -43,13 +43,13 @@ func (b *BaseMapper[T]) QueryOneByConditionMap(condition map[string]any, result 
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
 }
 
-// QueryOneByWhere 通过原始SQL查询
-func (b *BaseMapper[T]) QueryOneByWhere(rawSql string, result *T, args ...interface{}) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawSql, args...).Scan(result))
+// QueryOneByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
+func (b *BaseMapper[T]) QueryOneByWhere(rawWhereSql string, result *T, args ...interface{}) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
 // QueryByCondition 通过非零条件查询
-func (b *BaseMapper[T]) QueryByCondition(condition T, result *[]*T) (int64, error) {
+func (b *BaseMapper[T]) QueryByCondition(condition *T, result *[]*T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
 }
 
@@ -58,13 +58,13 @@ func (b *BaseMapper[T]) QueryByConditionMap(condition map[string]any, result *[]
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
 }
 
-// QueryByWhere 通过原始SQL查询
-func (b *BaseMapper[T]) QueryByWhere(rawSql string, result *[]*T, args ...interface{}) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawSql, args...).Scan(result))
+// QueryByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
+func (b *BaseMapper[T]) QueryByWhere(rawWhereSql string, result *[]*T, args ...interface{}) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
 // PageCondition 通过指定的非零值条件分页查询
-func (b *BaseMapper[T]) PageCondition(condition T, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
+func (b *BaseMapper[T]) PageCondition(condition *T, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -95,16 +95,16 @@ func (b *BaseMapper[T]) PageConditionMap(condition map[string]any, pageNumber, p
 	return total, nil
 }
 
-// PageWhere 通过原始SQL分页查询
-func (b *BaseMapper[T]) PageWhere(rawSql string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawSql, args...).Count(&total))
+// PageWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
+func (b *BaseMapper[T]) PageWhere(rawWhereSql string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&total))
 	if err != nil {
 		return 0, err
 	}
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawSql, args...).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -146,7 +146,7 @@ func (b *BaseMapper[T]) SaveOrUpdate(entity *T, excludeColumns ...string) (int64
 }
 
 // ModifyById 通过ID更新非零值字段
-func (b *BaseMapper[T]) ModifyById(updated T) (int64, error) {
+func (b *BaseMapper[T]) ModifyById(updated *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Updates(updated))
 }
 
@@ -156,11 +156,11 @@ func (b *BaseMapper[T]) ModifyMapById(id any, updated map[string]any) (int64, er
 }
 
 // ModifyByCondition 通过非零实体条件，更新非零实体字段
-func (b *BaseMapper[T]) ModifyByCondition(updated, condition T) (int64, error) {
+func (b *BaseMapper[T]) ModifyByCondition(updated, condition *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Updates(updated))
 }
 
-// ModifyByWhere 通过原始SQL查询条件，更新非零实体字段
+// ModifyByWhere 通过原始SQL查询条件，更新非零实体字段 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
 func (b *BaseMapper[T]) ModifyByWhere(updated T, rawWhereSql string, args ...interface{}) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Updates(updated))
 }
@@ -170,7 +170,7 @@ func (b *BaseMapper[T]) RemoveById(id ...any) (int64, error) {
 	return checkResult(gormDB.Delete(b.Value, id))
 }
 
-// RemoveByWhere 通过原始SQL删除相关数据
-func (b *BaseMapper[T]) RemoveByWhere(rawSql string, args ...interface{}) (int64, error) {
-	return checkResult(gormDB.Where(rawSql, args...).Delete(b.Value))
+// RemoveByWhere 通过原始SQL删除相关数据 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
+func (b *BaseMapper[T]) RemoveByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
+	return checkResult(gormDB.Where(rawWhereSql, args...).Delete(b.Value))
 }

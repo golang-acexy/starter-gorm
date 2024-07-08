@@ -3,7 +3,7 @@ module github.com/golang-acexy/starter-gorm
 go 1.18
 
 require (
-	github.com/acexy/golang-toolkit v0.0.11
+	github.com/acexy/golang-toolkit v0.0.14
 	github.com/golang-acexy/starter-parent v0.1.1
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.7
@@ -15,6 +15,6 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

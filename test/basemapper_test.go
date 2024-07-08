@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+func TestBaseSaveOne(t *testing.T) {
+	bm := TeacherMapper{}
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
+	fmt.Println(bm.Save(&teacher))
+	fmt.Println("saved id", teacher.ID)
+}
+
 func TestBaseSave(t *testing.T) {
 	bm := TeacherMapper{}
 	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
@@ -49,8 +56,8 @@ func TestBatch(t *testing.T) {
 func TestModifyById(t *testing.T) {
 	bm := TeacherMapper{}
 	updated := Teacher{Name: "update", Age: 21, Sex: 0}
-	updated.ID = 132
-	fmt.Println(bm.ModifyById(updated))
+	updated.ID = 47
+	fmt.Println(bm.ModifyById(&updated))
 }
 
 func TestModifyMapById(t *testing.T) {
@@ -77,7 +84,7 @@ func TestModifyByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	updated := Teacher{Name: "1", Age: 12}
 	condition := Teacher{Name: "2", Age: 1}
-	fmt.Println(bm.ModifyByCondition(updated, condition))
+	fmt.Println(bm.ModifyByCondition(&updated, &condition))
 }
 
 func TestQueryById(t *testing.T) {
@@ -90,7 +97,7 @@ func TestQueryById(t *testing.T) {
 func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	bm.QueryByCondition(Teacher{Name: "王五", Sex: 1}, teachers)
+	bm.QueryByCondition(&Teacher{Name: "王五", Sex: 1}, teachers)
 	fmt.Println(teachers)
 }
 
@@ -113,7 +120,7 @@ func TestQueryByConditionMap(t *testing.T) {
 func TestPageCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.PageCondition(Teacher{Name: "mapper"}, 3, 2, teachers))
+	fmt.Println(bm.PageCondition(&Teacher{Name: "mapper"}, 3, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
