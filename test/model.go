@@ -23,8 +23,8 @@ func (Student) TableName() string {
 // Teacher 继承BaseModel 并实现 IBaseModel
 type Teacher struct {
 	gormstarter.BaseModel[uint64]
-	CreatedAt time.Time `gorm:"column:create_time" gorm:"<-:create" json:"createTime"`
-	UpdatedAt time.Time `gorm:"column:update_time" gorm:"<-:update" json:"updateTime"`
+	CreatedAt time.Time `gorm:"column:create_time;<-:false" json:"createTime"`
+	UpdatedAt time.Time `gorm:"column:update_time;<-:update" json:"updateTime"`
 	Name      string
 	Sex       uint
 	Age       uint
