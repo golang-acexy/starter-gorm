@@ -28,6 +28,7 @@ type Teacher struct {
 	Name      string
 	Sex       uint
 	Age       uint
+	ClassNo   uint
 }
 
 func (Teacher) TableName() string {

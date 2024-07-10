@@ -95,30 +95,30 @@ func (t *Transaction) checkTransaction() bool {
 	return true
 }
 
-// QueryById 通过Id查询数据
+// SelectById 通过Id查询数据
 // model对象指针，用于指定数据表&接收返回结果
-func (t *Transaction) QueryById(model any, id any) *Transaction {
+func (t *Transaction) SelectById(model any, id any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Find(model, id), true)
 	})
 	return t
 }
 
-// QueryByCondition 通过Id查询数据
+// SelectByCondition 通过Id查询数据
 // condition model非零参数条件
 // result 返回数据指针
-func (t *Transaction) QueryByCondition(condition any, result any) *Transaction {
+func (t *Transaction) SelectByCondition(condition any, result any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Model(condition).Where(condition).Scan(result), true)
 	})
 	return t
 }
 
-// QueryByConditionMap 通过Id查询数据
+// SelectByConditionMap 通过Id查询数据
 // model	实体
 // condition 指定字段与值查询数据
 // result 返回数据指针
-func (t *Transaction) QueryByConditionMap(model any, condition map[string]any, result any) *Transaction {
+func (t *Transaction) SelectByConditionMap(model any, condition map[string]any, result any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		return checkResult(tx.Model(model).Where(condition).Scan(result), true)
 	})
@@ -137,11 +137,11 @@ func (t *Transaction) Save(entity any) *Transaction {
 	return t
 }
 
-// ModifyById 预设的更新功能 通过Id更新
+// UpdateById 预设的更新功能 通过Id更新
 // request	condition 作为更新时条件 需要指定主键
 //
 //	updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
-func (t *Transaction) ModifyById(condition, updated any) *Transaction {
+func (t *Transaction) UpdateById(condition, updated any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(condition).Updates(updated)
 		if result.Error != nil {
@@ -152,10 +152,10 @@ func (t *Transaction) ModifyById(condition, updated any) *Transaction {
 	return t
 }
 
-// ModifyByCondition 通过条件更新
+// UpdateByCondition 通过条件更新
 // updated 作为需要更新数据 仅更新updated非零值字段数据 零值会被自动忽略 可传入map[string]interface{}代替struct
 // where sql部分条件 也可以是一个model非零参数条件
-func (t *Transaction) ModifyByCondition(updated any, where interface{}, args ...interface{}) *Transaction {
+func (t *Transaction) UpdateByCondition(updated any, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(updated).Where(where, args...).Updates(updated)
 		if result.Error != nil {
@@ -166,11 +166,11 @@ func (t *Transaction) ModifyByCondition(updated any, where interface{}, args ...
 	return t
 }
 
-// ModifyByConditionMap 通过条件更新
+// UpdateByConditionMap 通过条件更新
 // request	updated 作为需要更新数据 传入map[string]interface{}代替struct防止忽略零值
 //
 //	where	sql部分条件 也可以是一个model非零参数条件
-func (t *Transaction) ModifyByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *Transaction {
+func (t *Transaction) UpdateByConditionMap(model any, updated map[string]interface{}, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Model(model).Where(where, args...).Updates(updated)
 		if result.Error != nil {
@@ -181,11 +181,11 @@ func (t *Transaction) ModifyByConditionMap(model any, updated map[string]interfa
 	return t
 }
 
-// RemoveById 预设的删除功能 根据id或则ids删除
+// DeleteById 预设的删除功能 根据id或则ids删除
 // request 	传入一个model，则其主键必须指定 调用通过主键删除
 //
 //	传入model切片(每个model需要指定主键) 批量通过主键删除
-func (t *Transaction) RemoveById(condition any) *Transaction {
+func (t *Transaction) DeleteById(condition any) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Delete(condition)
 		if result.Error != nil {
@@ -196,8 +196,8 @@ func (t *Transaction) RemoveById(condition any) *Transaction {
 	return t
 }
 
-// RemoveByCondition 预设删除功能 根据条件删除
-func (t *Transaction) RemoveByCondition(model any, where interface{}, args ...interface{}) *Transaction {
+// DeleteByCondition 预设删除功能 根据条件删除
+func (t *Transaction) DeleteByCondition(model any, where interface{}, args ...interface{}) *Transaction {
 	t.exec(func(tx *gorm.DB) (int64, error) {
 		result := tx.Where(where, args...).Delete(model)
 		if result.Error != nil {
