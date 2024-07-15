@@ -13,11 +13,11 @@ func TestTransaction(t *testing.T) {
 	tx := gormstarter.NewTransaction(true)
 
 	i := new([]Teacher)
-	tx.QueryByCondition(Teacher{Name: "王五"}, i)
+	tx.SelectByCondition(Teacher{Name: "王五"}, i)
 	fmt.Printf("%+v\n", i)
 
 	i = new([]Teacher)
-	tx.QueryByConditionMap(Teacher{}, map[string]any{"sex": 0}, i)
+	tx.SelectByConditionMap(Teacher{}, map[string]any{"sex": 0}, i)
 	fmt.Printf("%+v\n", i)
 
 	tx.Save(&Student{Name: "张三"})
@@ -26,12 +26,12 @@ func TestTransaction(t *testing.T) {
 	fmt.Printf("%+v\n", teacher)
 
 	queryTeacher := new(Teacher)
-	tx.QueryById(queryTeacher, teacher.ID)
+	tx.SelectById(queryTeacher, teacher.ID)
 	fmt.Printf("%+v\n", queryTeacher)
 
-	tx.ModifyById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
-	tx.ModifyByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
-	tx.ModifyByConditionMap(Student{}, map[string]interface{}{
+	tx.UpdateById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
+	tx.UpdateByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
+	tx.UpdateByConditionMap(Student{}, map[string]interface{}{
 		"name": "叶良辰",
 		"sex":  0,
 	}, "name = ? and id = ?", "王麻子", 11111) // 使用map防止零值不更新
@@ -44,11 +44,11 @@ func TestTransaction(t *testing.T) {
 
 	//tx.Rollback()
 	// 移除单条
-	tx.RemoveById(Student{ID: 1})
+	tx.DeleteById(Student{ID: 1})
 
 	// 移除多条
-	tx.RemoveById([]Student{{ID: 1}, {ID: 2}})
-	tx.RemoveByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
+	tx.DeleteById([]Student{{ID: 1}, {ID: 2}})
+	tx.DeleteByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	// 执行事务
 	flag, err := tx.Execute()
@@ -70,12 +70,12 @@ func TestTransactionPrepare(t *testing.T) {
 	fmt.Printf("由于此时tx.Save并没有执行，所以只能获取零值 teacher %+v\n", teacher)
 
 	queryTeacher := new(Teacher)
-	tx.QueryById(queryTeacher, teacher.ID)
+	tx.SelectById(queryTeacher, teacher.ID)
 	fmt.Printf("%+v\n", queryTeacher)
 
-	tx.ModifyById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
-	tx.ModifyByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
-	tx.ModifyByConditionMap(Student{}, map[string]interface{}{
+	tx.UpdateById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
+	tx.UpdateByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
+	tx.UpdateByConditionMap(Student{}, map[string]interface{}{
 		"name": "叶良辰",
 		"sex":  0,
 	}, "name = ? and id = ?", "王麻子", 1) // 使用map防止零值不更新
@@ -87,11 +87,11 @@ func TestTransactionPrepare(t *testing.T) {
 	})
 
 	// 移除单条
-	tx.RemoveById(Student{ID: 1})
+	tx.DeleteById(Student{ID: 1})
 
 	// 移除多条
-	tx.RemoveById([]Student{{ID: 1}, {ID: 2}})
-	tx.RemoveByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
+	tx.DeleteById([]Student{{ID: 1}, {ID: 2}})
+	tx.DeleteByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	tx.Rollback()
 
