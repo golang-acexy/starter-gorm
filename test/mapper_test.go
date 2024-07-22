@@ -62,6 +62,8 @@ func TestModifyById(t *testing.T) {
 	fmt.Println(bm.UpdateById(&updated))
 	// 通过指定字段更新 可以指定零值
 	fmt.Println(bm.UpdateById(&updated, "sex", "name", "age"))
+
+	fmt.Println(bm.UpdateByIdWithNonField(&updated, []string{"sex"}))
 }
 
 func TestModifyMapById(t *testing.T) {
