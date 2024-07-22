@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/util/json"
 	"testing"
 )
 
@@ -107,8 +108,8 @@ func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	// 由于Age是零值，不会用于查询
-	bm.SelectByCondition(&Teacher{Name: "王五", Sex: 1, Age: 0}, teachers)
-	fmt.Println(teachers)
+	bm.SelectByCondition(&Teacher{Sex: 1, Age: 0}, teachers, "ClassNo")
+	fmt.Println(json.ToJsonFormat(teachers))
 }
 
 func TestQueryByWhere(t *testing.T) {

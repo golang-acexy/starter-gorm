@@ -34,13 +34,15 @@ func (b *BaseMapper[T]) SelectById(id any, result *T) (int64, error) {
 }
 
 // SelectOneByCondition 通过条件查询 零值字段将被自动忽略
-func (b *BaseMapper[T]) SelectOneByCondition(condition *T, result *T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectOneByCondition(condition *T, result *T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
 // SelectOneByConditionMap 通过指定字段与值查询数据 解决零值条件问题
-func (b *BaseMapper[T]) SelectOneByConditionMap(condition map[string]any, result *T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectOneByConditionMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
 // SelectOneByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
@@ -49,13 +51,15 @@ func (b *BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...
 }
 
 // SelectByCondition 通过条件查询 零值字段将被自动忽略
-func (b *BaseMapper[T]) SelectByCondition(condition *T, result *[]*T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectByCondition(condition *T, result *[]*T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
 // SelectByConditionMap 通过指定字段与值查询数据 解决零值条件问题
-func (b *BaseMapper[T]) SelectByConditionMap(condition map[string]any, result *[]*T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectByConditionMap(condition map[string]any, result *[]*T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
 // SelectByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
@@ -64,7 +68,8 @@ func (b *BaseMapper[T]) SelectByWhere(rawWhereSql string, result *[]*T, args ...
 }
 
 // SelectPageByCondition 通过条件分页查询 零值字段将被自动忽略
-func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -72,7 +77,7 @@ func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -80,7 +85,8 @@ func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize
 }
 
 // SelectPageByConditionMap 通过指定字段与值查询数据分页查询  解决零值条件问题
-func (b *BaseMapper[T]) SelectPageByConditionMap(condition map[string]any, pageNumber, pageSize int, result *[]*T) (total int64, err error) {
+// specifyColumns 指定需要指定只查询的数据库字段
+func (b *BaseMapper[T]) SelectPageByConditionMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -88,7 +94,7 @@ func (b *BaseMapper[T]) SelectPageByConditionMap(condition map[string]any, pageN
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
