@@ -152,18 +152,20 @@ func (b *BaseMapper[T]) SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...st
 }
 
 // UpdateById 通过ID更新非零值字段
-func (b *BaseMapper[T]) UpdateById(updated *T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Updates(updated))
+// specifyColumns 指定需要指定更新的数据库字段 可以指定零值字段
+func (b *BaseMapper[T]) UpdateById(updated *T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Updates(updated))
 }
 
-// UpdateWithMapById 通过ID更新所有map中指定的列和值
-func (b *BaseMapper[T]) UpdateWithMapById(updated map[string]any, id any) (int64, error) {
+// UpdateUseMapById 通过ID更新所有map中指定的列和值
+func (b *BaseMapper[T]) UpdateUseMapById(updated map[string]any, id any) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id = ?", id).Updates(updated))
 }
 
 // UpdateByCondition 通过条件更新 零值字段将被自动忽略
-func (b *BaseMapper[T]) UpdateByCondition(updated, condition *T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Updates(updated))
+// specifyColumns 指定需要指定更新的数据库字段 可以指定零值字段
+func (b *BaseMapper[T]) UpdateByCondition(updated, condition *T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Updates(updated))
 }
 
 // UpdateByWhere 通过原始SQL查询条件，更新非零实体字段 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
