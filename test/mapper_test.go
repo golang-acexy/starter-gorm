@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/util/json"
 	"testing"
 )
 
@@ -57,17 +58,22 @@ func TestModifyById(t *testing.T) {
 	bm := TeacherMapper{}
 	updated := Teacher{Name: "update", Age: 21, Sex: 0}
 	updated.ID = 47
+	// 由于sex是零值并不会被用于更新的指定
 	fmt.Println(bm.UpdateById(&updated))
+	// 通过指定字段更新 可以指定零值
+	fmt.Println(bm.UpdateById(&updated, "sex", "name", "age"))
+
+	fmt.Println(bm.UpdateByIdWithNonField(&updated, []string{"sex"}))
 }
 
 func TestModifyMapById(t *testing.T) {
 	bm := TeacherMapper{}
-	fmt.Println(bm.UpdateWithMapById(map[string]any{"name": "Miss A", "sex": 0}, 132))
+	fmt.Println(bm.UpdateUseMapById(map[string]any{"name": "Miss A", "sex": 0}, 132))
 }
 
 func TestModifyByWhere(t *testing.T) {
 	bm := TeacherMapper{}
-	fmt.Println(bm.UpdateByWhere(&Teacher{Name: "Alex"}, "name = ? and age > ?", "mapper", 5))
+	fmt.Println(bm.UpdateByWhere(&Teacher{Name: "Alex", Age: 0}, "name = ? and age > ?", "mapper", 5))
 }
 
 func TestRemoveById(t *testing.T) {
@@ -107,8 +113,8 @@ func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	// 由于Age是零值，不会用于查询
-	bm.SelectByCondition(&Teacher{Name: "王五", Sex: 1, Age: 0}, teachers)
-	fmt.Println(teachers)
+	bm.SelectByCondition(&Teacher{Sex: 1, Age: 0}, teachers, "ClassNo")
+	fmt.Println(json.ToJsonFormat(teachers))
 }
 
 func TestQueryByWhere(t *testing.T) {

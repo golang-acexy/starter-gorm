@@ -3,8 +3,8 @@ module github.com/golang-acexy/starter-gorm
 go 1.20
 
 require (
-	github.com/acexy/golang-toolkit v0.0.17
-	github.com/golang-acexy/starter-parent v0.1.3
+	github.com/acexy/golang-toolkit v0.0.19
+	github.com/golang-acexy/starter-parent v0.1.4
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
