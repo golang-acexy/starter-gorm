@@ -1,10 +1,12 @@
 module github.com/golang-acexy/starter-gorm
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.20
-	github.com/golang-acexy/starter-parent v0.1.4
+	github.com/acexy/golang-toolkit v0.0.21
+	github.com/golang-acexy/starter-parent v0.1.5
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
