@@ -21,7 +21,7 @@ const (
 	defaultCharset = "utf8mb4"
 )
 
-type GromConfig struct {
+type GormConfig struct {
 	Username string
 	Password string
 	Host     string
@@ -39,11 +39,11 @@ type GromConfig struct {
 
 type GormStarter struct {
 
-	// GromConfig 配置
-	GromConfig GromConfig
+	// GormConfig 配置
+	GormConfig GormConfig
 
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
-	LazyGromConfig func() GromConfig
+	LazyGromConfig func() GormConfig
 
 	GormSetting *parent.Setting
 	InitFunc    func(instance *gorm.DB)
@@ -63,16 +63,16 @@ func (g *GormStarter) Setting() *parent.Setting {
 func (g *GormStarter) Start() (interface{}, error) {
 	var err error
 	if g.LazyGromConfig != nil {
-		g.GromConfig = g.LazyGromConfig()
+		g.GormConfig = g.LazyGromConfig()
 	}
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
-		DryRun:                                   g.GromConfig.DryRun,
+		DryRun:                                   g.GormConfig.DryRun,
 	}
-	if !g.GromConfig.UseDefaultLog {
+	if !g.GormConfig.UseDefaultLog {
 		config.Logger = &logrusLogger{logger.Logrus()}
 	}
-	if g.GromConfig.TimeUTC {
+	if g.GormConfig.TimeUTC {
 		config.NowFunc = func() time.Time {
 			return time.Now().UTC()
 		}
@@ -138,17 +138,17 @@ func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 }
 
 func (g *GormStarter) toDsn() string {
-	if g.GromConfig.Charset == "" {
-		g.GromConfig.Charset = defaultCharset
+	if g.GormConfig.Charset == "" {
+		g.GormConfig.Charset = defaultCharset
 	}
-	builder := str.NewBuilder(g.GromConfig.Username)
-	builder.WriteString(":").WriteString(g.GromConfig.Password).WriteString("@tcp(").WriteString(g.GromConfig.Host).WriteString(":").WriteString(strconv.Itoa(int(g.GromConfig.Port)))
-	builder.WriteString(")/").WriteString(g.GromConfig.Database)
-	builder.WriteString("?charset=" + g.GromConfig.Charset)
+	builder := str.NewBuilder(g.GormConfig.Username)
+	builder.WriteString(":").WriteString(g.GormConfig.Password).WriteString("@tcp(").WriteString(g.GormConfig.Host).WriteString(":").WriteString(strconv.Itoa(int(g.GormConfig.Port)))
+	builder.WriteString(")/").WriteString(g.GormConfig.Database)
+	builder.WriteString("?charset=" + g.GormConfig.Charset)
 	builder.WriteString("&parseTime=True") // support time.Time
-	if g.GromConfig.UrlParam != "" {
-		if strings.HasPrefix(g.GromConfig.UrlParam, "&") || strings.HasPrefix(g.GromConfig.UrlParam, "?") {
-			builder.WriteString("&" + str.Substring(g.GromConfig.UrlParam, 1, str.CharLength(g.GromConfig.UrlParam)))
+	if g.GormConfig.UrlParam != "" {
+		if strings.HasPrefix(g.GormConfig.UrlParam, "&") || strings.HasPrefix(g.GormConfig.UrlParam, "?") {
+			builder.WriteString("&" + str.Substring(g.GormConfig.UrlParam, 1, str.CharLength(g.GormConfig.UrlParam)))
 		}
 	}
 	return builder.ToString()
