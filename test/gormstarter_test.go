@@ -16,8 +16,8 @@ var starterLoader *parent.StarterLoader
 func init() {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
-			LazyGromConfig: func() gormstarter.GromConfig {
-				return gormstarter.GromConfig{
+			LazyGromConfig: func() gormstarter.GormConfig {
+				return gormstarter.GormConfig{
 					Username: "root",
 					Password: "root",
 					Database: "test",
