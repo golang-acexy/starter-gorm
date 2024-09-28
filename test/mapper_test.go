@@ -109,6 +109,13 @@ func TestQueryById(t *testing.T) {
 	fmt.Println(teacher)
 }
 
+func TestQueryByIds(t *testing.T) {
+	bm := TeacherMapper{}
+	var teacher []Teacher
+	fmt.Println(bm.SelectByIds([]interface{}{34, 36}, &teacher))
+	fmt.Println(teacher)
+}
+
 func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)

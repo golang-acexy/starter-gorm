@@ -4,6 +4,8 @@ github.com/acexy/golang-toolkit v0.0.21 h1:YLOddc0UWbVW+0leJxYUynQjhd6fVBlrILE5S
 github.com/acexy/golang-toolkit v0.0.21/go.mod h1:EYzekw7xhpu2sEBZFnmkPfD6oLEcU19co1oheTtKctg=
 github.com/acexy/golang-toolkit v0.0.24 h1:fLVEivBt+nae1xoZfNQZxMTeltUdH+tDVk2FcCUOhGM=
 github.com/acexy/golang-toolkit v0.0.24/go.mod h1:yHEqhUw8Lzeusv3C8+h5c5xu1l/tcbr70nm9Zd/tGXg=
+github.com/acexy/golang-toolkit v0.0.27 h1:+RtyS5WAl2lzMjLJQoGQ/tNfKmlEkbseX7rgf7xDHBY=
+github.com/acexy/golang-toolkit v0.0.27/go.mod h1:aH6L1giRX4/fBqbA6CuyWpywMa5UDrRJndYYIUWNBhE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -14,6 +16,8 @@ github.com/golang-acexy/starter-parent v0.1.5 h1:QcXrDSDHg9L7xiqyTRFfGQ+Unou95NA
 github.com/golang-acexy/starter-parent v0.1.5/go.mod h1:Xi5sKLZ3svlBaCpQ8/ji9rxHdWQaZdlaouxlhqD73v4=
 github.com/golang-acexy/starter-parent v0.1.6 h1:TQMaxW8R5lyL6wAFdGha47gpdF3leLcpY5S320bhqyE=
 github.com/golang-acexy/starter-parent v0.1.6/go.mod h1:KbdDvY0RG6mxbtmGavseOGJivbXEhnHQ1zI33uCT/Mg=
+github.com/golang-acexy/starter-parent v0.1.8 h1:zelLyyxZoSHoMsaFLwvWJSaIHZcFqf0fje+jvcC2EaQ=
+github.com/golang-acexy/starter-parent v0.1.8/go.mod h1:BokmPvxT4BkEKjN47qn0b981TzYbmD2HIpmfreTYN1w=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.5 h1:/o9tlHleP7gOFmsnYNz3RGnqzefHA47wQpKrrdTIwXQ=

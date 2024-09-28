@@ -34,6 +34,11 @@ func (b *BaseMapper[T]) SelectById(id any, result *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id = ?", id).Scan(result))
 }
 
+// SelectByIds 通过主键查询数据
+func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]T) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Where("id in ?", id).Scan(result))
+}
+
 // SelectOneByCondition 通过条件查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
 func (b *BaseMapper[T]) SelectOneByCondition(condition *T, result *T, specifyColumns ...string) (int64, error) {
