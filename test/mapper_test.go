@@ -97,8 +97,8 @@ func TestRemoveByCondition(t *testing.T) {
 
 func TestModifyByCondition(t *testing.T) {
 	bm := TeacherMapper{}
-	updated := Teacher{Name: "1", Age: 12}
-	condition := Teacher{Name: "2", Age: 1}
+	updated := Teacher{Name: "1", Age: 0}
+	condition := Teacher{Name: "2", Age: 0}
 	fmt.Println(bm.UpdateByCond(&updated, &condition))
 }
 
@@ -120,7 +120,7 @@ func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	// 由于Age是零值，不会用于查询
-	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, teachers, "ClassNo")
+	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, teachers, "age")
 	fmt.Println(json.ToJsonFormat(teachers))
 }
 
@@ -156,4 +156,16 @@ func TestPageConditionMap(t *testing.T) {
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
+}
+
+func TestUpdateByCondWithZeroField(t *testing.T) {
+	bm := TeacherMapper{}
+	updated := Teacher{Name: "1", Age: 0}
+	condition := Teacher{Name: "2", Age: 0}
+	fmt.Println(bm.UpdateByCondWithZeroField(&updated, &condition, []string{"age"}))
+}
+
+func TestUpdateByCondMap(t *testing.T) {
+	bm := TeacherMapper{}
+	fmt.Println(bm.UpdateByCondMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
 }
