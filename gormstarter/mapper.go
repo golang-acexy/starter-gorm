@@ -39,15 +39,15 @@ func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]T) (int64, error
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id in ?", id).Scan(result))
 }
 
-// SelectOneByCondition 通过条件查询 零值字段将被自动忽略
+// SelectOneByCond 通过条件查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectOneByCondition(condition *T, result *T, specifyColumns ...string) (int64, error) {
+func (b *BaseMapper[T]) SelectOneByCond(condition *T, result *T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
-// SelectOneByConditionMap 通过指定字段与值查询数据 解决零值条件问题
+// SelectOneByCondMap 通过指定字段与值查询数据 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectOneByConditionMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
+func (b *BaseMapper[T]) SelectOneByCondMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
@@ -56,15 +56,15 @@ func (b *BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
-// SelectByCondition 通过条件查询 零值字段将被自动忽略
+// SelectByCond 通过条件查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByCondition(condition *T, result *[]*T, specifyColumns ...string) (int64, error) {
+func (b *BaseMapper[T]) SelectByCond(condition *T, result *[]*T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
-// SelectByConditionMap 通过指定字段与值查询数据 解决零值条件问题
+// SelectByCondMap 通过指定字段与值查询数据 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByConditionMap(condition map[string]any, result *[]*T, specifyColumns ...string) (int64, error) {
+func (b *BaseMapper[T]) SelectByCondMap(condition map[string]any, result *[]*T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
@@ -73,9 +73,9 @@ func (b *BaseMapper[T]) SelectByWhere(rawWhereSql string, result *[]*T, args ...
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
-// SelectPageByCondition 通过条件分页查询 零值字段将被自动忽略
+// SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -90,9 +90,9 @@ func (b *BaseMapper[T]) SelectPageByCondition(condition *T, pageNumber, pageSize
 	return total, nil
 }
 
-// SelectPageByConditionMap 通过指定字段与值查询数据分页查询  解决零值条件问题
+// SelectPageByCondMap 通过指定字段与值查询数据分页查询  解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByConditionMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -157,42 +157,42 @@ func (b *BaseMapper[T]) SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...st
 	return checkResult(tx.Save(entity))
 }
 
-// UpdateById 通过ID更新
-// specifyColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
+// UpdateById 通过ID更新 含零值字段
+// specifyColumns 手动指定需要更新的列
 func (b *BaseMapper[T]) UpdateById(updated *T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Updates(updated))
 }
 
-// UpdateByIdWithNonField 通过ID更新非零值字段
-// noneFiledColumns 指定需要更新的零值字段
-func (b *BaseMapper[T]) UpdateByIdWithNonField(updated *T, noneFiledColumns []string) (int64, error) {
+// UpdateByIdWithoutZeroField 通过ID更新非零值字段
+// zeroFiledColumns 额外指定需要更新零值字段
+func (b *BaseMapper[T]) UpdateByIdWithoutZeroField(updated *T, zeroFiledColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(updated)
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, noneFiledColumns...)
+	nonZeroFields = append(nonZeroFields, zeroFiledColumns...)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Updates(updated))
 }
 
-// UpdateUseMapById 通过ID更新所有map中指定的列和值
-func (b *BaseMapper[T]) UpdateUseMapById(updated map[string]any, id any) (int64, error) {
+// UpdateByIdUseMap 通过ID更新所有map中指定的列和值
+func (b *BaseMapper[T]) UpdateByIdUseMap(updated map[string]any, id any) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id = ?", id).Updates(updated))
 }
 
-// UpdateByCondition 通过条件更新 零值字段将被自动忽略
+// UpdateByCond 通过条件更新 零值字段将被自动忽略
 // specifyColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
-func (b *BaseMapper[T]) UpdateByCondition(updated, condition *T, specifyColumns ...string) (int64, error) {
+func (b *BaseMapper[T]) UpdateByCond(updated, condition *T, specifyColumns ...string) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Updates(updated))
 }
 
-// UpdateByConditionWithNonField 通过条件更新
-// noneFiledColumns 指定需要更新的零值字段
-func (b *BaseMapper[T]) UpdateByConditionWithNonField(updated, condition *T, noneFiledColumns []string) (int64, error) {
+// UpdateByCondWithoutZeroField 通过条件更新非零值字段
+// zeroFiledColumns 额外指定需要更新零值字段
+func (b *BaseMapper[T]) UpdateByCondWithoutZeroField(updated, condition *T, zeroFiledColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(updated)
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, noneFiledColumns...)
+	nonZeroFields = append(nonZeroFields, zeroFiledColumns...)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Where(condition).Updates(updated))
 }
 
@@ -206,8 +206,8 @@ func (b *BaseMapper[T]) DeleteById(id ...any) (int64, error) {
 	return checkResult(gormDB.Delete(b.Value, id))
 }
 
-// DeleteByCondition 通过条件删除 零值字段将被自动忽略
-func (b *BaseMapper[T]) DeleteByCondition(condition *T) (int64, error) {
+// DeleteByCond 通过条件删除 零值字段将被自动忽略
+func (b *BaseMapper[T]) DeleteByCond(condition *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Delete(b.Value))
 }
 

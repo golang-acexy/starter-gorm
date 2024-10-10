@@ -13,11 +13,11 @@ func TestTransaction(t *testing.T) {
 	tx := gormstarter.NewTransaction(true)
 
 	i := new([]Teacher)
-	tx.SelectByCondition(Teacher{Name: "王五"}, i)
+	tx.SelectByCond(Teacher{Name: "王五"}, i)
 	fmt.Printf("%+v\n", i)
 
 	i = new([]Teacher)
-	tx.SelectByConditionMap(Teacher{}, map[string]any{"sex": 0}, i)
+	tx.SelectByCondMap(Teacher{}, map[string]any{"sex": 0}, i)
 	fmt.Printf("%+v\n", i)
 
 	tx.Save(&Student{Name: "张三"})
@@ -30,8 +30,8 @@ func TestTransaction(t *testing.T) {
 	fmt.Printf("%+v\n", queryTeacher)
 
 	tx.UpdateById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
-	tx.UpdateByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
-	tx.UpdateByConditionMap(Student{}, map[string]interface{}{
+	tx.UpdateByCond(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
+	tx.UpdateByCondMap(Student{}, map[string]interface{}{
 		"name": "叶良辰",
 		"sex":  0,
 	}, "name = ? and id = ?", "王麻子", 11111) // 使用map防止零值不更新
@@ -48,7 +48,7 @@ func TestTransaction(t *testing.T) {
 
 	// 移除多条
 	tx.DeleteById([]Student{{ID: 1}, {ID: 2}})
-	tx.DeleteByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
+	tx.DeleteByCond(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	// 执行事务
 	flag, err := tx.Execute()
@@ -74,8 +74,8 @@ func TestTransactionPrepare(t *testing.T) {
 	fmt.Printf("%+v\n", queryTeacher)
 
 	tx.UpdateById(Student{ID: 1}, Student{Name: "赵老五", Sex: 1})
-	tx.UpdateByCondition(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
-	tx.UpdateByConditionMap(Student{}, map[string]interface{}{
+	tx.UpdateByCond(Student{Name: "叶良辰", Sex: 0}, "name = ? and id = ?", "王麻子", 1) // sex 零值不能更新
+	tx.UpdateByCondMap(Student{}, map[string]interface{}{
 		"name": "叶良辰",
 		"sex":  0,
 	}, "name = ? and id = ?", "王麻子", 1) // 使用map防止零值不更新
@@ -91,7 +91,7 @@ func TestTransactionPrepare(t *testing.T) {
 
 	// 移除多条
 	tx.DeleteById([]Student{{ID: 1}, {ID: 2}})
-	tx.DeleteByCondition(Teacher{}, "name = ? and id = ?", "张三", 1)
+	tx.DeleteByCond(Teacher{}, "name = ? and id = ?", "张三", 1)
 
 	tx.Rollback()
 
