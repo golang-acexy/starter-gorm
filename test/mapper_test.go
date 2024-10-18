@@ -135,6 +135,8 @@ func TestQueryByConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	bm.SelectByCondMap(map[string]any{"sex": 0}, teachers)
+
+	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
