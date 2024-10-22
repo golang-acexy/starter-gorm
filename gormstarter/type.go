@@ -14,14 +14,12 @@ func (t *Timestamp) Scan(value interface{}) error {
 		*t = Timestamp{Time: time.Time{}}
 		return nil
 	}
-
 	switch v := value.(type) {
 	case time.Time:
 		*t = Timestamp{Time: v}
 	default:
 		return fmt.Errorf("cannot scan type %T into Timestamp", v)
 	}
-
 	return nil
 }
 
@@ -34,7 +32,6 @@ func (t Timestamp) Value() (driver.Value, error) {
 
 func (t Timestamp) MarshalJSON() ([]byte, error) {
 	return json.Time2Timestamp(t.Time)
-
 }
 
 func (t Timestamp) UnmarshalJSON(data []byte) error {
