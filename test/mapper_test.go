@@ -118,9 +118,10 @@ func TestQueryByIds(t *testing.T) {
 
 func TestQueryByCondition(t *testing.T) {
 	bm := TeacherMapper{}
-	teachers := new([]*Teacher)
+	var teachers []*Teacher
 	// 由于Age是零值，不会用于查询
-	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, teachers, "age")
+	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
+	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers)
 	fmt.Println(json.ToJsonFormat(teachers))
 }
 
@@ -135,6 +136,8 @@ func TestQueryByConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
 	bm.SelectByCondMap(map[string]any{"sex": 0}, teachers)
+
+	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
