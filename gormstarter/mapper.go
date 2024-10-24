@@ -58,25 +58,25 @@ func (b *BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...
 
 // SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByCond(condition *T, result *[]*T, specifyColumns ...string) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
+func (b *BaseMapper[T]) SelectByCond(condition *T, result *[]*T, orderBy string, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
 // SelectByCondMap 通过指定字段与值查询数据 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByCondMap(condition map[string]any, result *[]*T, specifyColumns ...string) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
+func (b *BaseMapper[T]) SelectByCondMap(condition map[string]any, result *[]*T, orderBy string, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
 // SelectByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b *BaseMapper[T]) SelectByWhere(rawWhereSql string, result *[]*T, args ...interface{}) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
+func (b *BaseMapper[T]) SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...interface{}) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Order(orderBy).Scan(result))
 }
 
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
+func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int, result *[]*T, orderBy string, specifyColumns ...string) (total int64, err error) {
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Order(orderBy).Count(&total))
 	if err != nil {
 		return 0, err
 	}
@@ -92,15 +92,15 @@ func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int,
 
 // SelectPageByCondMap 通过指定字段与值查询数据分页查询 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
+func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, orderBy string, specifyColumns ...string) (total int64, err error) {
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Order(orderBy).Count(&total))
 	if err != nil {
 		return 0, err
 	}
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -108,15 +108,15 @@ func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber
 }
 
 // SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&total))
+func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Order(orderBy).Count(&total))
 	if err != nil {
 		return 0, err
 	}
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
