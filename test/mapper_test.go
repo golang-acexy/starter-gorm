@@ -3,7 +3,9 @@ package test
 import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/util/json"
+	"gorm.io/gorm"
 	"testing"
+	"time"
 )
 
 func TestBaseSaveOne(t *testing.T) {
@@ -121,21 +123,41 @@ func TestQueryByCondition(t *testing.T) {
 	var teachers []*Teacher
 	// 由于Age是零值，不会用于查询
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
-	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers)
+	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
 	fmt.Println(json.ToJsonFormat(teachers))
 }
 
 func TestQueryByWhere(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	bm.SelectByWhere("name =? and age > ?", teachers, "mapper", 5)
+	bm.SelectByWhere("name =? and age > ?", "", teachers, "mapper", 5)
 	fmt.Println(teachers)
+}
+
+func TestQueryByGorm(t *testing.T) {
+	var bm TeacherMapper
+	teachers := new([]*Teacher)
+	row, _ := bm.SelectByGorm(teachers, func(db *gorm.DB) {
+		db.Where("create_time < ?", time.Now())
+	})
+	fmt.Println(row)
+	fmt.Println(json.ToJsonFormat(teachers))
+}
+
+func TestQueryOneByGorm(t *testing.T) {
+	var bm TeacherMapper
+	var teacher Teacher
+	row, _ := bm.SelectOneByGorm(&teacher, func(db *gorm.DB) {
+		db.Where("id = 8")
+	})
+	fmt.Println(row)
+	fmt.Println(json.ToJsonFormat(teacher))
 }
 
 func TestQueryByConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	bm.SelectByCondMap(map[string]any{"sex": 0}, teachers)
+	bm.SelectByCondMap(map[string]any{"sex": 0}, "", teachers)
 
 	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
@@ -146,7 +168,7 @@ func TestQueryByConditionMap(t *testing.T) {
 func TestPageCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.SelectPageByCond(&Teacher{Name: "mapper"}, 3, 2, teachers))
+	fmt.Println(bm.SelectPageByCond(&Teacher{Name: "mapper"}, "", 3, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
@@ -155,7 +177,7 @@ func TestPageCondition(t *testing.T) {
 func TestPageConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.SelectPageByCondMap(map[string]any{"sex": 0}, 2, 2, teachers))
+	fmt.Println(bm.SelectPageByCondMap(map[string]any{"sex": 0}, "", 2, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
