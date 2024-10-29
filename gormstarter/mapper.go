@@ -42,7 +42,7 @@ func (b *BaseMapper[T]) SelectById(id any, result *T) (int64, error) {
 }
 
 // SelectByIds 通过主键查询数据
-func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]T) (int64, error) {
+func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]*T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id in ?", id).Scan(result))
 }
 
