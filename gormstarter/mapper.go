@@ -1,6 +1,8 @@
 package gormstarter
 
 import (
+	"errors"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
 	"gorm.io/gorm"
 	"math"
@@ -27,6 +29,11 @@ func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 		return math.MaxInt64, nil
 	}
 	return rs.RowsAffected, nil
+}
+
+// Gorm 获取原生Gorm对象
+func (b *BaseMapper[T]) Gorm() *gorm.DB {
+	return gormDB.Table(b.Value.TableName())
 }
 
 // SelectById 通过主键查询数据
@@ -171,11 +178,30 @@ func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumbe
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
 func (b *BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error) {
-	var tx = gormDB
+	var db = gormDB
 	if len(excludeColumns) > 0 {
-		tx = tx.Omit(excludeColumns...)
+		db = db.Omit(excludeColumns...)
 	}
-	return checkResult(tx.Create(entity))
+	return checkResult(db.Create(entity))
+}
+
+// SaveWithoutZero 保存数据 零值将不会参与保存
+func (b *BaseMapper[T]) SaveWithoutZero(entity *T) (int64, error) {
+	nonZeroFields, err := reflect.NonZeroField(entity)
+	if err != nil {
+		return 0, err
+	}
+	if len(nonZeroFields) == 0 {
+		return 0, errors.New("no field to save")
+	}
+	if len(nonZeroFields) == 1 {
+		return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields[0]).Create(entity))
+	} else {
+		nonZeroFieldsSlice := coll.SliceCollect(nonZeroFields[1:], func(t string) interface{} {
+			return t
+		})
+		return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields[0], nonZeroFieldsSlice...).Create(entity))
+	}
 }
 
 // SaveBatch 批量新增 零值也将参与保存

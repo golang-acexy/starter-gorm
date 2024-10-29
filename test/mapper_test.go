@@ -15,10 +15,19 @@ func TestBaseSaveOne(t *testing.T) {
 	fmt.Println("saved id", teacher.ID)
 }
 
+func TestSaveWithoutZero(t *testing.T) {
+	bm := TeacherMapper{}
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 0, ClassNo: 12}
+	fmt.Println(bm.SaveWithoutZero(&teacher))
+	fmt.Println("saved id", teacher.ID)
+}
+
 func TestBaseSave(t *testing.T) {
 	bm := TeacherMapper{}
-	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 0}
 	fmt.Println(bm.Save(&teacher))
+	fmt.Println("saved id", teacher.ID)
+	fmt.Println(bm.SaveWithoutZero(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
 	// 测试自动保存0值
