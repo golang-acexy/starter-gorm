@@ -87,6 +87,36 @@ func (b *BaseMapper[T]) SelectByGorm(result *[]*T, raw func(*gorm.DB)) (int64, e
 	return checkResult(db.Scan(result))
 }
 
+// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
+func (b *BaseMapper[T]) CountByCond(condition *T) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&count))
+	return count, err
+}
+
+// CountByCondMap 通过指定字段与值查询数据总数 解决零值条件问题
+func (b *BaseMapper[T]) CountByCondMap(condition map[string]any) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&count))
+	return count, err
+}
+
+// CountByWhere 通过原始SQL查询数据总数
+func (b *BaseMapper[T]) CountByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&count))
+	return count, err
+}
+
+// CountByGorm 通过原始Gorm查询数据总数
+func (b *BaseMapper[T]) CountByGorm(raw func(*gorm.DB)) (int64, error) {
+	var count int64
+	var db = gormDB.Table(b.Value.TableName())
+	raw(db)
+	_, err := checkResult(db.Count(&count))
+	return count, err
+}
+
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
 func (b *BaseMapper[T]) SelectPageByCond(condition *T, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {

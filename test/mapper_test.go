@@ -194,3 +194,11 @@ func TestUpdateByCondMap(t *testing.T) {
 	bm := TeacherMapper{}
 	fmt.Println(bm.UpdateByCondMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
 }
+
+func TestCount(t *testing.T) {
+	var bm TeacherMapper
+	fmt.Println(bm.CountByCondMap(map[string]any{"age": 0}))
+	fmt.Println(bm.CountByCond(&Teacher{
+		Age: 1,
+	}))
+}
