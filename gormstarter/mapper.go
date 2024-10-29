@@ -185,8 +185,8 @@ func (b *BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error)
 	return checkResult(db.Create(entity))
 }
 
-// SaveWithoutZero 保存数据 零值将不会参与保存
-func (b *BaseMapper[T]) SaveWithoutZero(entity *T) (int64, error) {
+// SaveWithoutZeroField 保存数据 零值将不会参与保存
+func (b *BaseMapper[T]) SaveWithoutZeroField(entity *T) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(entity)
 	if err != nil {
 		return 0, err
