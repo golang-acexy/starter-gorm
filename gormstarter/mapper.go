@@ -1,6 +1,8 @@
 package gormstarter
 
 import (
+	"errors"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
 	"gorm.io/gorm"
 	"math"
@@ -29,13 +31,18 @@ func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 	return rs.RowsAffected, nil
 }
 
+// Gorm 获取原生Gorm对象
+func (b *BaseMapper[T]) Gorm() *gorm.DB {
+	return gormDB.Table(b.Value.TableName())
+}
+
 // SelectById 通过主键查询数据
 func (b *BaseMapper[T]) SelectById(id any, result *T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id = ?", id).Scan(result))
 }
 
 // SelectByIds 通过主键查询数据
-func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]T) (int64, error) {
+func (b *BaseMapper[T]) SelectByIds(id []interface{}, result *[]*T) (int64, error) {
 	return checkResult(gormDB.Table(b.Value.TableName()).Where("id in ?", id).Scan(result))
 }
 
@@ -47,8 +54,8 @@ func (b *BaseMapper[T]) SelectOneByCond(condition *T, result *T, specifyColumns 
 
 // SelectOneByCondMap 通过指定字段与值查询数据 解决查询条件零值问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectOneByCondMap(condition map[string]any, result *T) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Scan(result))
+func (b *BaseMapper[T]) SelectOneByCondMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
 // SelectOneByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
@@ -56,26 +63,70 @@ func (b *BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...
 	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
+// SelectOneByGorm 通过原始Gorm查询单条数据
+func (b *BaseMapper[T]) SelectOneByGorm(result *T, raw func(*gorm.DB)) (int64, error) {
+	var db = gormDB.Table(b.Value.TableName())
+	raw(db)
+	return checkResult(db.Scan(result))
+}
+
 // SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByCond(condition *T, result *[]*T, specifyColumns ...string) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
+func (b *BaseMapper[T]) SelectByCond(condition *T, orderBy string, result *[]*T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
 // SelectByCondMap 通过指定字段与值查询数据 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectByCondMap(condition map[string]any, result *[]*T, specifyColumns ...string) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Scan(result))
+func (b *BaseMapper[T]) SelectByCondMap(condition map[string]any, orderBy string, result *[]*T, specifyColumns ...string) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
 // SelectByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b *BaseMapper[T]) SelectByWhere(rawWhereSql string, result *[]*T, args ...interface{}) (int64, error) {
-	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Scan(result))
+func (b *BaseMapper[T]) SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...interface{}) (int64, error) {
+	return checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Order(orderBy).Scan(result))
+}
+
+// SelectByGorm 通过原始Gorm查询数据
+func (b *BaseMapper[T]) SelectByGorm(result *[]*T, raw func(*gorm.DB)) (int64, error) {
+	var db = gormDB.Table(b.Value.TableName())
+	raw(db)
+	return checkResult(db.Scan(result))
+}
+
+// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
+func (b *BaseMapper[T]) CountByCond(condition *T) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&count))
+	return count, err
+}
+
+// CountByCondMap 通过指定字段与值查询数据总数 解决零值条件问题
+func (b *BaseMapper[T]) CountByCondMap(condition map[string]any) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&count))
+	return count, err
+}
+
+// CountByWhere 通过原始SQL查询数据总数
+func (b *BaseMapper[T]) CountByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
+	var count int64
+	_, err := checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&count))
+	return count, err
+}
+
+// CountByGorm 通过原始Gorm查询数据总数
+func (b *BaseMapper[T]) CountByGorm(raw func(*gorm.DB)) (int64, error) {
+	var count int64
+	var db = gormDB.Table(b.Value.TableName())
+	raw(db)
+	_, err := checkResult(db.Count(&count))
+	return count, err
 }
 
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+func (b *BaseMapper[T]) SelectPageByCond(condition *T, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -83,7 +134,7 @@ func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int,
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -92,7 +143,7 @@ func (b *BaseMapper[T]) SelectPageByCond(condition *T, pageNumber, pageSize int,
 
 // SelectPageByCondMap 通过指定字段与值查询数据分页查询 解决零值条件问题
 // specifyColumns 需要指定只查询的数据库字段
-func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -100,7 +151,7 @@ func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +159,7 @@ func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, pageNumber
 }
 
 // SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
+func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&total))
 	if err != nil {
 		return 0, err
@@ -116,7 +167,7 @@ func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql string, pageNumber, pageSi
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -127,11 +178,30 @@ func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql string, pageNumber, pageSi
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
 func (b *BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error) {
-	var tx = gormDB
+	var db = gormDB
 	if len(excludeColumns) > 0 {
-		tx = tx.Omit(excludeColumns...)
+		db = db.Omit(excludeColumns...)
 	}
-	return checkResult(tx.Create(entity))
+	return checkResult(db.Create(entity))
+}
+
+// SaveWithoutZeroField 保存数据 零值将不会参与保存
+func (b *BaseMapper[T]) SaveWithoutZeroField(entity *T) (int64, error) {
+	nonZeroFields, err := reflect.NonZeroField(entity)
+	if err != nil {
+		return 0, err
+	}
+	if len(nonZeroFields) == 0 {
+		return 0, errors.New("no field to save")
+	}
+	if len(nonZeroFields) == 1 {
+		return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields[0]).Create(entity))
+	} else {
+		nonZeroFieldsSlice := coll.SliceCollect(nonZeroFields[1:], func(t string) interface{} {
+			return t
+		})
+		return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields[0], nonZeroFieldsSlice...).Create(entity))
+	}
 }
 
 // SaveBatch 批量新增 零值也将参与保存

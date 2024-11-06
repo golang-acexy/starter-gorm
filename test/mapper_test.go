@@ -3,7 +3,9 @@ package test
 import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/util/json"
+	"gorm.io/gorm"
 	"testing"
+	"time"
 )
 
 func TestBaseSaveOne(t *testing.T) {
@@ -13,10 +15,19 @@ func TestBaseSaveOne(t *testing.T) {
 	fmt.Println("saved id", teacher.ID)
 }
 
+func TestSaveWithoutZero(t *testing.T) {
+	bm := TeacherMapper{}
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 0, ClassNo: 12}
+	fmt.Println(bm.SaveWithoutZeroField(&teacher))
+	fmt.Println("saved id", teacher.ID)
+}
+
 func TestBaseSave(t *testing.T) {
 	bm := TeacherMapper{}
-	teacher := Teacher{Name: "mapper", Age: 12, Sex: 1}
+	teacher := Teacher{Name: "mapper", Age: 12, Sex: 0}
 	fmt.Println(bm.Save(&teacher))
+	fmt.Println("saved id", teacher.ID)
+	fmt.Println(bm.SaveWithoutZeroField(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
 	// 测试自动保存0值
@@ -111,9 +122,9 @@ func TestQueryById(t *testing.T) {
 
 func TestQueryByIds(t *testing.T) {
 	bm := TeacherMapper{}
-	var teacher []Teacher
-	fmt.Println(bm.SelectByIds([]interface{}{34, 36}, &teacher))
-	fmt.Println(teacher)
+	var teachers []*Teacher
+	fmt.Println(bm.SelectByIds([]interface{}{34, 36}, &teachers))
+	fmt.Println(json.ToJsonFormat(teachers))
 }
 
 func TestQueryByCondition(t *testing.T) {
@@ -121,21 +132,41 @@ func TestQueryByCondition(t *testing.T) {
 	var teachers []*Teacher
 	// 由于Age是零值，不会用于查询
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
-	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers)
+	bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
 	fmt.Println(json.ToJsonFormat(teachers))
 }
 
 func TestQueryByWhere(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	bm.SelectByWhere("name =? and age > ?", teachers, "mapper", 5)
+	bm.SelectByWhere("name =? and age > ?", "", teachers, "mapper", 5)
 	fmt.Println(teachers)
+}
+
+func TestQueryByGorm(t *testing.T) {
+	var bm TeacherMapper
+	teachers := new([]*Teacher)
+	row, _ := bm.SelectByGorm(teachers, func(db *gorm.DB) {
+		db.Where("create_time < ?", time.Now())
+	})
+	fmt.Println(row)
+	fmt.Println(json.ToJsonFormat(teachers))
+}
+
+func TestQueryOneByGorm(t *testing.T) {
+	var bm TeacherMapper
+	var teacher Teacher
+	row, _ := bm.SelectOneByGorm(&teacher, func(db *gorm.DB) {
+		db.Where("id = 8")
+	})
+	fmt.Println(row)
+	fmt.Println(json.ToJsonFormat(teacher))
 }
 
 func TestQueryByConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	bm.SelectByCondMap(map[string]any{"sex": 0}, teachers)
+	bm.SelectByCondMap(map[string]any{"sex": 0}, "", teachers)
 
 	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
@@ -146,7 +177,7 @@ func TestQueryByConditionMap(t *testing.T) {
 func TestPageCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.SelectPageByCond(&Teacher{Name: "mapper"}, 3, 2, teachers))
+	fmt.Println(bm.SelectPageByCond(&Teacher{Name: "mapper"}, "", 3, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
@@ -155,7 +186,7 @@ func TestPageCondition(t *testing.T) {
 func TestPageConditionMap(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.SelectPageByCondMap(map[string]any{"sex": 0}, 2, 2, teachers))
+	fmt.Println(bm.SelectPageByCondMap(map[string]any{"sex": 0}, "", 2, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
@@ -171,4 +202,12 @@ func TestUpdateByCondWithZeroField(t *testing.T) {
 func TestUpdateByCondMap(t *testing.T) {
 	bm := TeacherMapper{}
 	fmt.Println(bm.UpdateByCondMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
+}
+
+func TestCount(t *testing.T) {
+	var bm TeacherMapper
+	fmt.Println(bm.CountByCondMap(map[string]any{"age": 0}))
+	fmt.Println(bm.CountByCond(&Teacher{
+		Age: 1,
+	}))
 }
