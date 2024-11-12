@@ -177,7 +177,7 @@ func TestQueryByConditionMap(t *testing.T) {
 func TestPageCondition(t *testing.T) {
 	bm := TeacherMapper{}
 	teachers := new([]*Teacher)
-	fmt.Println(bm.SelectPageByCond(&Teacher{Name: "mapper"}, "", 3, 2, teachers))
+	fmt.Println(bm.SelectPageByCond(&Teacher{Sex: 1}, "", 2, 3, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}

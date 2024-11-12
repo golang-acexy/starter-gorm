@@ -8,18 +8,6 @@ import (
 	"math"
 )
 
-type BaseModel[IdType any] struct {
-	ID IdType `gorm:"<-:create,primaryKey" json:"id"`
-}
-
-type IBaseModel interface {
-	TableName() string
-}
-
-type BaseMapper[T IBaseModel] struct {
-	Value T
-}
-
 func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 	if rs.Error != nil {
 		return 0, rs.Error
@@ -31,7 +19,7 @@ func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 	return rs.RowsAffected, nil
 }
 
-// Gorm 获取原生Gorm对象
+// Gorm Mapper对应的原生Gorm操作能力
 func (b *BaseMapper[T]) Gorm() *gorm.DB {
 	return gormDB.Table(b.Value.TableName())
 }
@@ -125,8 +113,11 @@ func (b *BaseMapper[T]) CountByGorm(raw func(*gorm.DB)) (int64, error) {
 }
 
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
-// specifyColumns 需要指定只查询的数据库字段
+// specifyColumns 需要指定只查询的数据库字段 pageNumber 页码 1开始
 func (b *BaseMapper[T]) SelectPageByCond(condition *T, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+	if pageNumber <= 0 || pageSize <= 0 {
+		return 0, errors.New("pageNumber or pageSize <= 0")
+	}
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -142,8 +133,11 @@ func (b *BaseMapper[T]) SelectPageByCond(condition *T, orderBy string, pageNumbe
 }
 
 // SelectPageByCondMap 通过指定字段与值查询数据分页查询 解决零值条件问题
-// specifyColumns 需要指定只查询的数据库字段
+// specifyColumns 需要指定只查询的数据库字段 pageNumber 页码 1开始
 func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+	if pageNumber <= 0 || pageSize <= 0 {
+		return 0, errors.New("pageNumber or pageSize <= 0")
+	}
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -160,6 +154,9 @@ func (b *BaseMapper[T]) SelectPageByCondMap(condition map[string]any, orderBy st
 
 // SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
 func (b *BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
+	if pageNumber <= 0 || pageSize <= 0 {
+		return 0, errors.New("pageNumber or pageSize <= 0")
+	}
 	_, err = checkResult(gormDB.Table(b.Value.TableName()).Where(rawWhereSql, args...).Count(&total))
 	if err != nil {
 		return 0, err

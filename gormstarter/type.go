@@ -7,6 +7,18 @@ import (
 	"time"
 )
 
+type BaseModel[IdType any] struct {
+	ID IdType `gorm:"<-:create,primaryKey" json:"id"`
+}
+
+type IBaseModel interface {
+	TableName() string
+}
+
+type BaseMapper[T IBaseModel] struct {
+	Value T
+}
+
 type Timestamp json.Timestamp
 
 func (t *Timestamp) Scan(value interface{}) error {
