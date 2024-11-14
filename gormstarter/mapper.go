@@ -231,13 +231,14 @@ func (b *BaseMapper[T]) UpdateById(updated *T, updateColumns ...string) (int64, 
 }
 
 // UpdateByIdWithoutZeroField 通过ID更新非零值字段
-// zeroFiledColumns 额外指定需要更新零值字段
-func (b *BaseMapper[T]) UpdateByIdWithoutZeroField(updated *T, zeroFiledColumns ...string) (int64, error) {
+// allowZeroFiledColumns 额外指定需要更新零值字段
+func (b *BaseMapper[T]) UpdateByIdWithoutZeroField(updated *T, allowZeroFiledColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(updated)
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, zeroFiledColumns...)
+	nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	nonZeroFields = coll.SliceDistinct(nonZeroFields)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Updates(updated))
 }
 
@@ -253,13 +254,14 @@ func (b *BaseMapper[T]) UpdateByCond(updated, condition *T, updateColumns ...str
 }
 
 // UpdateByCondWithZeroField 通过条件更新，并指定零值字段用于更新 条件：零值将自动忽略
-// zeroFiledColumns 额外指定需要更新的零值字段
-func (b *BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, zeroFiledColumns []string) (int64, error) {
+// allowZeroFiledColumns 额外指定需要更新的零值字段
+func (b *BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, allowZeroFiledColumns []string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(updated)
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, zeroFiledColumns...)
+	nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	nonZeroFields = coll.SliceDistinct(nonZeroFields)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Where(condition).Updates(updated))
 }
 
