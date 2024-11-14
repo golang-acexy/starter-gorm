@@ -237,7 +237,9 @@ func (b *BaseMapper[T]) UpdateByIdWithoutZeroField(updated *T, allowZeroFiledCol
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	if len(allowZeroFiledColumns) > 0 {
+		nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	}
 	nonZeroFields = coll.SliceDistinct(nonZeroFields)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Updates(updated))
 }
@@ -260,7 +262,9 @@ func (b *BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, allowZe
 	if err != nil {
 		return 0, err
 	}
-	nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	if len(allowZeroFiledColumns) > 0 {
+		nonZeroFields = append(nonZeroFields, allowZeroFiledColumns...)
+	}
 	nonZeroFields = coll.SliceDistinct(nonZeroFields)
 	return checkResult(gormDB.Table(b.Value.TableName()).Select(nonZeroFields).Where(condition).Updates(updated))
 }
