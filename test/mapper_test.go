@@ -196,7 +196,7 @@ func TestUpdateByCondWithZeroField(t *testing.T) {
 	bm := TeacherMapper{}
 	updated := Teacher{Name: "1", Age: 0}
 	condition := Teacher{Name: "2", Age: 0}
-	fmt.Println(bm.UpdateByCondWithZeroField(&updated, &condition, []string{"age"}))
+	fmt.Println(bm.UpdateByCondWithZeroField(&updated, &condition, []string{"ClassNo"}))
 }
 
 func TestUpdateByCondMap(t *testing.T) {
