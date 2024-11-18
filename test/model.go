@@ -35,6 +35,10 @@ func (Teacher) TableName() string {
 	return "demo_teacher"
 }
 
+func (Teacher) DBType() gormstarter.DBType {
+	return gormstarter.DBTypeMySQL
+}
+
 // TeacherMapper 声明Teacher 获取基于BaseMapper的能力
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]

@@ -18,11 +18,12 @@ func init() {
 		&gormstarter.GormStarter{
 			LazyGormConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
-					Username: "root",
-					Password: "root",
-					Database: "test",
+					Username: "postgres",
+					Password: "tech-acexy",
+					Database: "postgres",
 					Host:     "127.0.0.1",
-					Port:     13306,
+					Port:     5432,
+					DBType:   gormstarter.DBTypePostgres,
 				}
 			},
 
@@ -47,8 +48,8 @@ func TestRegisterGorm(t *testing.T) {
 		for i := 1; i <= 10; i++ {
 			go func() {
 				for {
-					var v int
-					tx := db.Raw("SELECT SLEEP(1)").Scan(&v)
+					var v string
+					tx := db.Raw("SELECT pg_sleep(1)").Scan(&v)
 					if tx.Error != nil {
 						fmt.Printf("%+v \n", tx.Error)
 						return
