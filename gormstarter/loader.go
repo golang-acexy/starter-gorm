@@ -188,3 +188,13 @@ func RawGormDB(dbType ...DBType) *gorm.DB {
 	}
 	return gormDBs[dbType[0]]
 }
+
+// RawMysqlGormDB 获取 mysql 数据库类型的 gorm.DB
+func RawMysqlGormDB() *gorm.DB {
+	return RawGormDB(DBTypeMySQL)
+}
+
+// RawPostgresGormDB 获取 postgres 数据库类型的 gorm.DB
+func RawPostgresGormDB() *gorm.DB {
+	return RawGormDB(DBTypePostgres)
+}

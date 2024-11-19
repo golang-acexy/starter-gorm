@@ -16,7 +16,7 @@ const (
 type DBType string
 
 type BaseModel[IdType any] struct {
-	ID IdType `gorm:"<-:create,primaryKey" json:"id"`
+	ID IdType `gorm:"<-:false,primaryKey" json:"id"`
 }
 
 type IBaseModel interface {

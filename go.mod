@@ -5,7 +5,7 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.33-0.20241114033516-d8974727c420
+	github.com/acexy/golang-toolkit v0.0.34-0.20241119023622-ae1113fbcea4
 	github.com/golang-acexy/starter-parent v0.1.10
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.7
@@ -22,6 +22,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
