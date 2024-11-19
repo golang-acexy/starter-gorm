@@ -35,9 +35,6 @@ type BaseMapper[M IBaseModel] struct {
 
 type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
 
-	// GetMapper 获取Mapper
-	GetMapper() B
-
 	// Gorm Mapper对应的原生Gorm操作能力
 	Gorm() *gorm.DB
 

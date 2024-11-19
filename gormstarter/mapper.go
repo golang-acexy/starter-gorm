@@ -29,9 +29,6 @@ func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 	return rs.RowsAffected, nil
 }
 
-func (b BaseMapper[T]) GetMapper() BaseMapper[T] {
-	return b
-}
 func (b BaseMapper[T]) Gorm() *gorm.DB {
 	return b.rawDb().Table(b.model.TableName())
 }
