@@ -118,7 +118,7 @@ func TestQueryById(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teacher model.Teacher
 	fmt.Println(bm.SelectById(1, &teacher))
-	fmt.Println(teacher)
+	fmt.Println(json.ToJson(teacher))
 }
 
 func TestQueryByIds(t *testing.T) {
