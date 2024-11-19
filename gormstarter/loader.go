@@ -74,7 +74,7 @@ func (g *GormStarter) Setting() *parent.Setting {
 			g.GormConfig.DBType = DBTypeMySQL
 		}
 	}
-	return parent.NewSetting("Gorm-Starter: <"+string(g.GormConfig.DBType)+">", 20, false, time.Second*30, func(instance interface{}) {
+	return parent.NewSetting("Gorm-Starter: "+string(g.GormConfig.DBType), 20, false, time.Second*30, func(instance interface{}) {
 		if g.InitFunc != nil {
 			g.InitFunc(instance.(*gorm.DB))
 		}
