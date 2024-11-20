@@ -145,8 +145,7 @@ type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
 	DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error)
 }
 
-// 时间戳处理
-
+// Timestamp 时间戳处理 接收数据库的时间类型
 type Timestamp json.Timestamp
 
 func (t *Timestamp) Scan(value interface{}) error {
