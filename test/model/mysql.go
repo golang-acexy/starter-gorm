@@ -1,4 +1,4 @@
-package test
+package model
 
 import (
 	"github.com/golang-acexy/starter-gorm/gormstarter"
@@ -24,7 +24,7 @@ func (Student) TableName() string {
 type Teacher struct {
 	gormstarter.BaseModel[uint64]
 	CreatedAt gormstarter.Timestamp  `gorm:"column:create_time;<-:false" json:"createTime"`
-	UpdatedAt *gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"`
+	UpdatedAt *gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"` // 指定update时自动更新时间
 	Name      string
 	Sex       uint
 	Age       uint
@@ -33,6 +33,10 @@ type Teacher struct {
 
 func (Teacher) TableName() string {
 	return "demo_teacher"
+}
+
+func (Teacher) DBType() gormstarter.DBType {
+	return gormstarter.DBTypeMySQL
 }
 
 // TeacherMapper 声明Teacher 获取基于BaseMapper的能力

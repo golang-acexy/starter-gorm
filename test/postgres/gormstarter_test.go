@@ -16,13 +16,14 @@ var starterLoader *parent.StarterLoader
 func init() {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
-			LazyGromConfig: func() gormstarter.GormConfig {
+			LazyGormConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
-					Username: "root",
-					Password: "root",
-					Database: "test",
+					Username: "postgres",
+					Password: "tech-acexy",
+					Database: "postgres",
 					Host:     "127.0.0.1",
-					Port:     13306,
+					Port:     5432,
+					DBType:   gormstarter.DBTypePostgres,
 				}
 			},
 
@@ -47,18 +48,19 @@ func TestRegisterGorm(t *testing.T) {
 		for i := 1; i <= 10; i++ {
 			go func() {
 				for {
-					var v int
-					tx := db.Raw("SELECT SLEEP(5)").Scan(&v)
+					var v string
+					tx := db.Raw("SELECT pg_sleep(1)").Scan(&v)
 					if tx.Error != nil {
 						fmt.Printf("%+v \n", tx.Error)
 						return
 					}
+					fmt.Println(v)
 				}
 			}()
 		}
 	}()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	stopResult, err := starterLoader.Stop(time.Second * 10)
 	if err != nil {
 		fmt.Printf("%+v\n", err)
