@@ -5,7 +5,7 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.35-0.20241119084225-3ccc1c62144f
+	github.com/acexy/golang-toolkit v0.0.35
 	github.com/golang-acexy/starter-parent v0.1.10
 	github.com/lib/pq v1.10.9
 	github.com/sirupsen/logrus v1.9.3
