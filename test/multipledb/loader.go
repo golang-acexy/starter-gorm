@@ -3,8 +3,6 @@ package multipledb
 import (
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-parent/parent"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var starterLoader *parent.StarterLoader
@@ -30,9 +28,6 @@ func init() {
 					Port:     5432,
 					DBType:   gormstarter.DBTypePostgres,
 				}
-			},
-			InitFunc: func(instance *gorm.DB) {
-				instance.Logger.LogMode(logger.Info)
 			},
 		},
 	})

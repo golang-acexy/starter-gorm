@@ -5,8 +5,6 @@ import (
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-parent/parent"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"testing"
 	"time"
 )
@@ -24,10 +22,6 @@ func init() {
 					Host:     "127.0.0.1",
 					Port:     13306,
 				}
-			},
-
-			InitFunc: func(instance *gorm.DB) {
-				instance.Logger.LogMode(logger.Info)
 			},
 		},
 	})

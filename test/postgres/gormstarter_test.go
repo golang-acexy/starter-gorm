@@ -24,11 +24,11 @@ func init() {
 					Host:     "127.0.0.1",
 					Port:     5432,
 					DBType:   gormstarter.DBTypePostgres,
-				}
-			},
 
-			InitFunc: func(instance *gorm.DB) {
-				instance.Logger.LogMode(logger.Info)
+					InitFunc: func(instance *gorm.DB) {
+						instance.Logger.LogMode(logger.Info)
+					},
+				}
 			},
 		},
 	})

@@ -42,20 +42,17 @@ type GormConfig struct {
 	// Postgres 配置
 	PostgresTimezone  string
 	PostgresEnableSSl bool
+
+	InitFunc func(instance *gorm.DB)
 }
 
 type GormStarter struct {
-
 	// GormConfig 配置
 	GormConfig GormConfig
-
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
 	LazyGormConfig func() GormConfig
-
-	GormSetting *parent.Setting
-	InitFunc    func(instance *gorm.DB)
-
 	lazyGormConfig *GormConfig
+	GormSetting    *parent.Setting
 }
 
 func (g *GormStarter) Setting() *parent.Setting {
@@ -75,8 +72,8 @@ func (g *GormStarter) Setting() *parent.Setting {
 		}
 	}
 	return parent.NewSetting("Gorm-Starter: "+string(g.GormConfig.DBType), 20, false, time.Second*30, func(instance interface{}) {
-		if g.InitFunc != nil {
-			g.InitFunc(instance.(*gorm.DB))
+		if g.GormConfig.InitFunc != nil {
+			g.GormConfig.InitFunc(instance.(*gorm.DB))
 		}
 	})
 }
