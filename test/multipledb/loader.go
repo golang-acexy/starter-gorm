@@ -10,7 +10,7 @@ var starterLoader *parent.StarterLoader
 func init() {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
-			GormConfig: gormstarter.GormConfig{
+			Config: gormstarter.GormConfig{
 				Username: "root",
 				Password: "root",
 				Database: "test",
@@ -19,7 +19,7 @@ func init() {
 			},
 		},
 		&gormstarter.GormStarter{
-			LazyGormConfig: func() gormstarter.GormConfig {
+			LazyConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
 					Username: "postgres",
 					Password: "tech-acexy",

@@ -47,72 +47,72 @@ type GormConfig struct {
 }
 
 type GormStarter struct {
-	// GormConfig 配置
-	GormConfig GormConfig
+	// Config 配置
+	Config GormConfig
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
-	LazyGormConfig func() GormConfig
-	lazyGormConfig *GormConfig
-	GormSetting    *parent.Setting
+	LazyConfig  func() GormConfig
+	lazyConfig  *GormConfig
+	GormSetting *parent.Setting
 }
 
 func (g *GormStarter) Setting() *parent.Setting {
 	if g.GormSetting != nil {
 		return g.GormSetting
 	}
-	if g.GormConfig.DBType == "" {
-		if g.LazyGormConfig != nil {
-			lazyGormConfig := g.LazyGormConfig()
-			g.lazyGormConfig = &lazyGormConfig
-			g.GormConfig.DBType = lazyGormConfig.DBType
-			if g.GormConfig.DBType == "" {
-				g.GormConfig.DBType = DBTypeMySQL
+	if g.Config.DBType == "" {
+		if g.LazyConfig != nil {
+			lazyGormConfig := g.LazyConfig()
+			g.lazyConfig = &lazyGormConfig
+			g.Config.DBType = lazyGormConfig.DBType
+			if g.Config.DBType == "" {
+				g.Config.DBType = DBTypeMySQL
 			}
 		} else {
-			g.GormConfig.DBType = DBTypeMySQL
+			g.Config.DBType = DBTypeMySQL
 		}
 	}
-	return parent.NewSetting("Gorm-Starter: "+string(g.GormConfig.DBType), 20, false, time.Second*30, func(instance interface{}) {
-		if g.GormConfig.InitFunc != nil {
-			g.GormConfig.InitFunc(instance.(*gorm.DB))
+	return parent.NewSetting("Gorm-Starter: "+string(g.Config.DBType), 20, false, time.Second*30, func(instance interface{}) {
+		if g.Config.InitFunc != nil {
+			g.Config.InitFunc(instance.(*gorm.DB))
 		}
 	})
 }
 
 func (g *GormStarter) Start() (interface{}, error) {
 	var err error
-	if g.LazyGormConfig != nil {
-		if g.lazyGormConfig == nil {
-			g.GormConfig = g.LazyGormConfig()
+	if g.LazyConfig != nil {
+		if g.lazyConfig == nil {
+			g.Config = g.LazyConfig()
 		} else {
-			g.GormConfig = *g.lazyGormConfig
+			g.Config = *g.lazyConfig
 		}
 	}
 	config := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
-		DryRun:                                   g.GormConfig.DryRun,
+		DryRun:                                   g.Config.DryRun,
 	}
-	if !g.GormConfig.UseDefaultLog {
+	if !g.Config.UseDefaultLog {
 		config.Logger = &logrusLogger{logger.Logrus()}
 	}
-	if g.GormConfig.TimeUTC {
+	if g.Config.TimeUTC {
 		config.NowFunc = func() time.Time {
 			return time.Now().UTC()
 		}
 	}
-	if g.GormConfig.DBType == "" {
-		g.GormConfig.DBType = DBTypeMySQL
+	if g.Config.DBType == "" {
+		g.Config.DBType = DBTypeMySQL
 	}
-	if g.GormConfig.Charset == "" {
-		g.GormConfig.Charset = defaultCharset
+	if g.Config.Charset == "" {
+		g.Config.Charset = defaultCharset
 	}
 	if defaultDBType == "" {
-		defaultDBType = g.GormConfig.DBType
+		defaultDBType = g.Config.DBType
 	}
-	_, ok := gormDBs[g.GormConfig.DBType]
+	_, ok := gormDBs[g.Config.DBType]
 	if ok {
-		return nil, errors.New("database type " + string(g.GormConfig.DBType) + " already exist")
+		return nil, errors.New("database type " + string(g.Config.DBType) + " already exist")
 	}
-	gormDB, err := openDB(g.GormConfig, config)
+	gormDB, err := openDB(g.Config, config)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (g *GormStarter) Start() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	gormDBs[g.GormConfig.DBType] = gormDB
+	gormDBs[g.Config.DBType] = gormDB
 	return gormDB, nil
 }
 
@@ -147,7 +147,7 @@ func (g *GormStarter) closedAllConn(sqlDb *sql.DB) bool {
 }
 
 func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	dbType := g.GormConfig.DBType
+	dbType := g.Config.DBType
 	gormDB := gormDBs[dbType]
 	sqlDb, err := gormDB.DB()
 	if err != nil {
