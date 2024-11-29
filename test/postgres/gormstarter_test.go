@@ -16,7 +16,7 @@ var starterLoader *parent.StarterLoader
 func init() {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
-			LazyGormConfig: func() gormstarter.GormConfig {
+			LazyConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
 					Username: "postgres",
 					Password: "tech-acexy",
@@ -24,11 +24,10 @@ func init() {
 					Host:     "127.0.0.1",
 					Port:     5432,
 					DBType:   gormstarter.DBTypePostgres,
+					InitFunc: func(instance *gorm.DB) {
+						instance.Logger.LogMode(logger.Info)
+					},
 				}
-			},
-
-			InitFunc: func(instance *gorm.DB) {
-				instance.Logger.LogMode(logger.Info)
 			},
 		},
 	})
