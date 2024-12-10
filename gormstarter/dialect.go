@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func openDB(config GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
+func openDB(config *GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 	switch config.DBType {
 	case DBTypeMySQL:
 		return openMysqlDB(config, gormConfig)
@@ -22,7 +22,7 @@ func openDB(config GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 }
 
 // OpenMysqlDB 创建Mysql数据库连接
-func openMysqlDB(config GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
+func openMysqlDB(config *GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 	builder := str.NewBuilder(config.Username)
 	builder.WriteString(":").WriteString(config.Password).WriteString("@tcp(").WriteString(config.Host).WriteString(":").WriteString(strconv.Itoa(int(config.Port)))
 	builder.WriteString(")/").WriteString(config.Database).WriteString("?charset=" + config.Charset)
@@ -35,7 +35,7 @@ func openMysqlDB(config GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 	return gorm.Open(mysql.Open(builder.ToString()), gormConfig)
 }
 
-func openPostgresDB(config GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
+func openPostgresDB(config *GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 	sslModel := "disable"
 	if config.PostgresEnableSSl {
 		sslModel = "enable"
