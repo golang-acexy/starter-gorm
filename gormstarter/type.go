@@ -31,6 +31,7 @@ type IBaseModelWithDBType interface {
 
 type BaseMapper[M IBaseModel] struct {
 	model M
+	Tx    *gorm.DB
 }
 
 type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {

@@ -3,6 +3,7 @@ package mysql
 import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-gorm/test/model"
 	"gorm.io/gorm"
 	"testing"
@@ -14,6 +15,7 @@ func TestBaseSaveOne(t *testing.T) {
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
 	fmt.Println(bm.Save(&teacher, "ClassNo"))
 	fmt.Println("saved id", teacher.ID)
+
 }
 
 func TestSaveWithoutZero(t *testing.T) {
@@ -168,7 +170,6 @@ func TestQueryByConditionMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
 	bm.SelectByCondMap(map[string]any{"sex": 0}, "", teachers)
-
 	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
@@ -211,4 +212,18 @@ func TestCount(t *testing.T) {
 	fmt.Println(bm.CountByCond(&model.Teacher{
 		Age: 1,
 	}))
+}
+
+func TestTransaction(t *testing.T) {
+	var mp model.TeacherMapper
+	mpTx := model.TeacherMapper{}
+	tx := gormstarter.RawGormDB().Begin()
+	mpTx.Tx = tx
+	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
+	fmt.Println(mp.Save(&teacher))
+	teacher = model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 13}
+	fmt.Println(mpTx.Save(&teacher))
+	fmt.Println(mpTx.Save(&teacher))
+	tx.Commit()
+
 }
