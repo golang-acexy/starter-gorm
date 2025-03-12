@@ -1,12 +1,10 @@
 module github.com/golang-acexy/starter-gorm
 
-go 1.21.0
-
-toolchain go1.21.5
+go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.41
-	github.com/golang-acexy/starter-parent v0.1.12
+	github.com/acexy/golang-toolkit v0.0.42
+	github.com/golang-acexy/starter-parent v0.1.13
 	github.com/lib/pq v1.10.9
 	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/mysql v1.5.7
@@ -24,11 +22,10 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/timandy/routine v1.1.4 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
