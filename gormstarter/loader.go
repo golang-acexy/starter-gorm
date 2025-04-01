@@ -15,6 +15,7 @@ const defaultCharset = "utf8mb4"
 // 管理多类型数据库操作实例
 var gormDBs map[DBType]*gorm.DB
 var defaultDBType DBType
+var gormConfig *GormConfig
 
 func init() {
 	gormDBs = make(map[DBType]*gorm.DB)
@@ -49,27 +50,26 @@ type GormStarter struct {
 	Config GormConfig
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig  func() GormConfig
-	config      *GormConfig
 	GormSetting *parent.Setting
 }
 
 func (g *GormStarter) getConfig() *GormConfig {
-	if g.config == nil {
+	if gormConfig == nil {
 		if g.LazyConfig != nil {
 			lazyGormConfig := g.LazyConfig()
-			g.config = &lazyGormConfig
-			g.config.DBType = lazyGormConfig.DBType
-			if g.config.DBType == "" {
-				g.config.DBType = DBTypeMySQL
+			gormConfig = &lazyGormConfig
+			gormConfig.DBType = lazyGormConfig.DBType
+			if gormConfig.DBType == "" {
+				gormConfig.DBType = DBTypeMySQL
 			}
 		} else {
-			g.config = &g.Config
-			if g.config.DBType == "" {
-				g.config.DBType = DBTypeMySQL
+			gormConfig = &g.Config
+			if gormConfig.DBType == "" {
+				gormConfig.DBType = DBTypeMySQL
 			}
 		}
 	}
-	return g.config
+	return gormConfig
 }
 
 func (g *GormStarter) Setting() *parent.Setting {
@@ -87,15 +87,15 @@ func (g *GormStarter) Setting() *parent.Setting {
 func (g *GormStarter) Start() (interface{}, error) {
 	var err error
 	config := g.getConfig()
-	gormConfig := &gorm.Config{
+	rawGormConfig := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   config.DryRun,
 	}
 	if !config.UseDefaultLog {
-		gormConfig.Logger = &logrusLogger{logger.Logrus()}
+		rawGormConfig.Logger = &logrusLogger{logger.Logrus()}
 	}
 	if config.TimeUTC {
-		gormConfig.NowFunc = func() time.Time {
+		rawGormConfig.NowFunc = func() time.Time {
 			return time.Now().UTC()
 		}
 	}
@@ -112,7 +112,7 @@ func (g *GormStarter) Start() (interface{}, error) {
 	if ok {
 		return nil, errors.New("database type " + string(config.DBType) + " already exist")
 	}
-	gormDB, err := openDB(config, gormConfig)
+	gormDB, err := openDB(config, rawGormConfig)
 	if err != nil {
 		return nil, err
 	}
