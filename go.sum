@@ -16,6 +16,8 @@ github.com/golang-acexy/starter-parent v0.1.13 h1:GuOzCsXYPS5josirtQAmMx8VIBqPwN
 github.com/golang-acexy/starter-parent v0.1.13/go.mod h1:ZJ96OS1iLyz0SSWnYjwpebt1E6PTLD4Uojln5dku7dA=
 github.com/golang-acexy/starter-parent v0.1.14 h1:UbFGUpiRDuh1hXRg5dY3sCgAJ+MUZOnu1UxbqJr34rg=
 github.com/golang-acexy/starter-parent v0.1.14/go.mod h1:iWg08DKgDSGqsUjAPPoNghR/8p6zhT3FdEFOygyrSwM=
+github.com/golang-acexy/starter-parent v0.1.15 h1:poaYgB7hNXU1/jgOZrj78if27E+Gd1FTlaupR9qNLnE=
+github.com/golang-acexy/starter-parent v0.1.15/go.mod h1:iWg08DKgDSGqsUjAPPoNghR/8p6zhT3FdEFOygyrSwM=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
