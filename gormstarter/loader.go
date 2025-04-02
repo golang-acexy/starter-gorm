@@ -15,7 +15,6 @@ const defaultCharset = "utf8mb4"
 // 管理多类型数据库操作实例
 var gormDBs map[DBType]*gorm.DB
 var defaultDBType DBType
-var gormConfig *GormConfig
 
 func init() {
 	gormDBs = make(map[DBType]*gorm.DB)
@@ -50,26 +49,27 @@ type GormStarter struct {
 	Config GormConfig
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig  func() GormConfig
+	config      *GormConfig
 	GormSetting *parent.Setting
 }
 
 func (g *GormStarter) getConfig() *GormConfig {
-	if gormConfig == nil {
+	if g.config == nil {
 		if g.LazyConfig != nil {
 			lazyGormConfig := g.LazyConfig()
-			gormConfig = &lazyGormConfig
-			gormConfig.DBType = lazyGormConfig.DBType
-			if gormConfig.DBType == "" {
-				gormConfig.DBType = DBTypeMySQL
+			g.config = &lazyGormConfig
+			g.config.DBType = lazyGormConfig.DBType
+			if g.config.DBType == "" {
+				g.config.DBType = DBTypeMySQL
 			}
 		} else {
-			gormConfig = &g.Config
-			if gormConfig.DBType == "" {
-				gormConfig.DBType = DBTypeMySQL
+			g.config = &g.Config
+			if g.config.DBType == "" {
+				g.config.DBType = DBTypeMySQL
 			}
 		}
 	}
-	return gormConfig
+	return g.config
 }
 
 func (g *GormStarter) Setting() *parent.Setting {
