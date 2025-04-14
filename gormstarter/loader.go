@@ -87,15 +87,15 @@ func (g *GormStarter) Setting() *parent.Setting {
 func (g *GormStarter) Start() (interface{}, error) {
 	var err error
 	config := g.getConfig()
-	gormConfig := &gorm.Config{
+	rawGormConfig := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   config.DryRun,
 	}
 	if !config.UseDefaultLog {
-		gormConfig.Logger = &logrusLogger{logger.Logrus()}
+		rawGormConfig.Logger = &logrusLogger{logger.Logrus()}
 	}
 	if config.TimeUTC {
-		gormConfig.NowFunc = func() time.Time {
+		rawGormConfig.NowFunc = func() time.Time {
 			return time.Now().UTC()
 		}
 	}
@@ -112,7 +112,7 @@ func (g *GormStarter) Start() (interface{}, error) {
 	if ok {
 		return nil, errors.New("database type " + string(config.DBType) + " already exist")
 	}
-	gormDB, err := openDB(config, gormConfig)
+	gormDB, err := openDB(config, rawGormConfig)
 	if err != nil {
 		return nil, err
 	}
