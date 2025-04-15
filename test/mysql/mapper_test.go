@@ -109,6 +109,11 @@ func TestRemoveByCondition(t *testing.T) {
 	}))
 }
 
+func TestRemoveByMap(t *testing.T) {
+	var bm model.TeacherMapper
+	fmt.Println(bm.DeleteByMap(map[string]any{"name": "mapper", "sex": 1}))
+}
+
 func TestModifyByCondition(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
@@ -225,5 +230,4 @@ func TestTransaction(t *testing.T) {
 	fmt.Println(mpTx.Save(&teacher))
 	fmt.Println(mpTx.Save(&teacher))
 	tx.Commit()
-
 }

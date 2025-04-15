@@ -144,6 +144,9 @@ type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
 
 	// DeleteByWhere 通过原始SQL删除相关数据 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
 	DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error)
+
+	// DeleteByMap 通过Map类型条件删除
+	DeleteByMap(condition map[string]any) (int64, error)
 }
 
 // Timestamp 时间戳处理 接收数据库的时间类型

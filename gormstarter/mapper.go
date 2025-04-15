@@ -257,3 +257,7 @@ func (b BaseMapper[T]) DeleteByCond(condition *T) (int64, error) {
 func (b BaseMapper[T]) DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
 	return checkResult(b.rawDB().Where(rawWhereSql, args...).Delete(b.model))
 }
+
+func (b BaseMapper[T]) DeleteByMap(condition map[string]any) (int64, error) {
+	return checkResult(b.rawDB().Where(condition).Delete(b.model))
+}
