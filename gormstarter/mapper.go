@@ -194,6 +194,13 @@ func (b BaseMapper[T]) SaveBatch(entities *[]*T, excludeColumns ...string) (int6
 	return checkResult(db.Create(entities))
 }
 
+func (b BaseMapper[T]) SaveUseMap(entity map[string]any) (int64, error) {
+	if len(entity) == 0 {
+		return 0, errors.New("no field to save")
+	}
+	return checkResult(b.rawDB().Create(entity))
+}
+
 func (b BaseMapper[T]) SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
 	var db = b.rawDB()
 	if len(excludeColumns) > 0 {

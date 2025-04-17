@@ -16,7 +16,7 @@ const (
 type DBType string
 
 type BaseModel[IdType any] struct {
-	ID IdType `gorm:"<-:false,primaryKey" json:"id"`
+	ID IdType `gorm:"<-:false;primaryKey" json:"id"`
 }
 
 type IBaseModel interface {
@@ -100,12 +100,15 @@ type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
 	Save(entity *T, excludeColumns ...string) (int64, error)
 
-	// SaveWithoutZeroField 保存数据 零值将不会参与保存
-	SaveWithoutZeroField(entity *T) (int64, error)
-
 	// SaveBatch 批量新增 零值也将参与保存
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
 	SaveBatch(entities *[]*T, excludeColumns ...string) (int64, error)
+
+	// SaveWithoutZeroField 保存数据 零值将不会参与保存
+	SaveWithoutZeroField(entity *T) (int64, error)
+
+	// SaveUseMap 通过Map类型保存数据
+	SaveUseMap(entity map[string]any) (int64, error)
 
 	// SaveOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
 	// exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
