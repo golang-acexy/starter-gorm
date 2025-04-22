@@ -48,7 +48,7 @@ func (b BaseMapper[T]) SelectOneByCond(condition *T, result *T, specifyColumns .
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
-func (b BaseMapper[T]) SelectOneByCondMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
+func (b BaseMapper[T]) SelectOneByMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
@@ -66,7 +66,7 @@ func (b BaseMapper[T]) SelectByCond(condition *T, orderBy string, result *[]*T, 
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
-func (b BaseMapper[T]) SelectByCondMap(condition map[string]any, orderBy string, result *[]*T, specifyColumns ...string) (int64, error) {
+func (b BaseMapper[T]) SelectByMap(condition map[string]any, orderBy string, result *[]*T, specifyColumns ...string) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(condition).Order(orderBy).Scan(result))
 }
 
@@ -86,7 +86,7 @@ func (b BaseMapper[T]) CountByCond(condition *T) (int64, error) {
 	return count, err
 }
 
-func (b BaseMapper[T]) CountByCondMap(condition map[string]any) (int64, error) {
+func (b BaseMapper[T]) CountByMap(condition map[string]any) (int64, error) {
 	var count int64
 	_, err := checkResult(b.rawDB().Table(b.model.TableName()).Where(condition).Count(&count))
 	return count, err
@@ -124,7 +124,7 @@ func (b BaseMapper[T]) SelectPageByCond(condition *T, orderBy string, pageNumber
 	return total, nil
 }
 
-func (b BaseMapper[T]) SelectPageByCondMap(condition map[string]any, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
+func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error) {
 	if pageNumber <= 0 || pageSize <= 0 {
 		return 0, errors.New("pageNumber or pageSize <= 0")
 	}
@@ -194,6 +194,13 @@ func (b BaseMapper[T]) SaveBatch(entities *[]*T, excludeColumns ...string) (int6
 	return checkResult(db.Create(entities))
 }
 
+func (b BaseMapper[T]) SaveUseMap(entity map[string]any) (int64, error) {
+	if len(entity) == 0 {
+		return 0, errors.New("no field to save")
+	}
+	return checkResult(b.rawDB().Create(entity))
+}
+
 func (b BaseMapper[T]) SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
 	var db = b.rawDB()
 	if len(excludeColumns) > 0 {
@@ -238,7 +245,7 @@ func (b BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, allowZer
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(nonZeroFields).Where(condition).Updates(updated))
 }
 
-func (b BaseMapper[T]) UpdateByCondMap(updated, condition map[string]any) (int64, error) {
+func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where(condition).Updates(updated))
 }
 
@@ -256,4 +263,8 @@ func (b BaseMapper[T]) DeleteByCond(condition *T) (int64, error) {
 
 func (b BaseMapper[T]) DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
 	return checkResult(b.rawDB().Where(rawWhereSql, args...).Delete(b.model))
+}
+
+func (b BaseMapper[T]) DeleteByMap(condition map[string]any) (int64, error) {
+	return checkResult(b.rawDB().Where(condition).Delete(b.model))
 }

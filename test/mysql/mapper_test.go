@@ -109,6 +109,11 @@ func TestRemoveByCondition(t *testing.T) {
 	}))
 }
 
+func TestRemoveByMap(t *testing.T) {
+	var bm model.TeacherMapper
+	fmt.Println(bm.DeleteByMap(map[string]any{"name": "mapper", "sex": 1}))
+}
+
 func TestModifyByCondition(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
@@ -169,7 +174,7 @@ func TestQueryOneByGorm(t *testing.T) {
 func TestQueryByConditionMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	bm.SelectByCondMap(map[string]any{"sex": 0}, "", teachers)
+	bm.SelectByMap(map[string]any{"sex": 0}, "", teachers)
 	fmt.Println(json.ToJsonFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
@@ -188,7 +193,7 @@ func TestPageCondition(t *testing.T) {
 func TestPageConditionMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByCondMap(map[string]any{"sex": 0}, "", 2, 2, teachers))
+	fmt.Println(bm.SelectPageByMap(map[string]any{"sex": 0}, "", 2, 2, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
@@ -203,12 +208,12 @@ func TestUpdateByCondWithZeroField(t *testing.T) {
 
 func TestUpdateByCondMap(t *testing.T) {
 	bm := model.TeacherMapper{}
-	fmt.Println(bm.UpdateByCondMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
+	fmt.Println(bm.UpdateByMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
 }
 
 func TestCount(t *testing.T) {
 	var bm model.TeacherMapper
-	fmt.Println(bm.CountByCondMap(map[string]any{"age": 0}))
+	fmt.Println(bm.CountByMap(map[string]any{"age": 0}))
 	fmt.Println(bm.CountByCond(&model.Teacher{
 		Age: 1,
 	}))
@@ -225,5 +230,4 @@ func TestTransaction(t *testing.T) {
 	fmt.Println(mpTx.Save(&teacher))
 	fmt.Println(mpTx.Save(&teacher))
 	tx.Commit()
-
 }
