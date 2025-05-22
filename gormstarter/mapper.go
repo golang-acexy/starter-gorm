@@ -44,7 +44,7 @@ func (b BaseMapper[T]) SelectByIds(id []interface{}, result *[]*T) (int64, error
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where("id in ?", id).Scan(result))
 }
 
-func (b BaseMapper[T]) SelectOneByCond(condition *T, result *T, specifyColumns ...string) (int64, error) {
+func (b BaseMapper[T]) SelectOneByCond(condition, result *T, specifyColumns ...string) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(condition).Scan(result))
 }
 
