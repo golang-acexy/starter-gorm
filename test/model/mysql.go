@@ -53,6 +53,6 @@ func (t TeacherMapper) ById(id uint64) *Teacher {
 
 func (t TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
 	return TeacherMapper{
-		BaseMapper: t.BaseMapper.GetBaseMapperWithTx(tx),
+		t.BaseMapper.GetBaseMapperWithTx(tx),
 	}
 }
