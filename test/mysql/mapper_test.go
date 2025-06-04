@@ -71,6 +71,7 @@ func TestBatch(t *testing.T) {
 func TestModifyById(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "update", Age: 21, Sex: 0}
+
 	updated.ID = 47
 	// 由于sex是零值并不会被用于更新的指定
 	fmt.Println(bm.UpdateById(&updated))

@@ -16,6 +16,27 @@ const (
 // Timestamp 时间戳处理 接收数据库的时间类型
 type Timestamp json.Timestamp
 
+type DBType string
+
+type BaseModel[IdType any] struct {
+	ID IdType `gorm:"<-:false;primaryKey" json:"id"`
+}
+
+type IBaseModel interface {
+	TableName() string
+}
+
+// IBaseModelWithDBType 当gorm管理多个不同数据库类型时，需要实现此接口 以便指定该数据库类型 （初始化加载的第一个数据库类型不需要指定）
+type IBaseModelWithDBType interface {
+	TableName() string
+	DBType() DBType
+}
+
+type BaseMapper[M IBaseModel] struct {
+	model M
+	Tx    *gorm.DB
+}
+
 func (t *Timestamp) Scan(value interface{}) error {
 	if value == nil {
 		*t = Timestamp{Time: time.Time{}}
@@ -48,27 +69,6 @@ func (t Timestamp) UnmarshalJSON(data []byte) error {
 	}
 	t.Time = formatTime
 	return nil
-}
-
-type DBType string
-
-type BaseModel[IdType any] struct {
-	ID IdType `gorm:"<-:false;primaryKey" json:"id"`
-}
-
-type IBaseModel interface {
-	TableName() string
-}
-
-// IBaseModelWithDBType 当gorm管理多个不同数据库类型时，需要实现此接口 以便指定该数据库类型 （初始化加载的第一个数据库类型不需要指定）
-type IBaseModelWithDBType interface {
-	TableName() string
-	DBType() DBType
-}
-
-type BaseMapper[M IBaseModel] struct {
-	model M
-	Tx    *gorm.DB
 }
 
 type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
