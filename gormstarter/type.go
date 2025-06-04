@@ -76,8 +76,8 @@ type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
 	// Gorm Mapper对应的原生Gorm操作能力
 	Gorm() *gorm.DB
 
-	// WithTx 设置事务 并返回带有指定事务的Mapper
-	WithTx(tx *gorm.DB) BaseMapper[T]
+	// GetTxMapper 设置事务 并返回带有指定事务的Mapper
+	GetTxMapper(tx *gorm.DB) BaseMapper[T]
 
 	// SelectById 通过主键查询数据
 	SelectById(id any, result *T) (int64, error)

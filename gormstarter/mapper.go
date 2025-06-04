@@ -37,8 +37,8 @@ func (b BaseMapper[T]) Gorm() *gorm.DB {
 	return b.rawDB().Table(b.model.TableName())
 }
 
-// WithTx 设置事务 并返回带有指定事务的Mapper
-func (b BaseMapper[T]) WithTx(tx *gorm.DB) BaseMapper[T] {
+// GetTxMapper 设置事务 并返回带有指定事务的Mapper
+func (b BaseMapper[T]) GetTxMapper(tx *gorm.DB) BaseMapper[T] {
 	return BaseMapper[T]{
 		model: b.model,
 		Tx:    tx,
