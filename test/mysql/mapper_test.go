@@ -223,11 +223,14 @@ func TestCount(t *testing.T) {
 func TestTransaction(t *testing.T) {
 	var mp model.TeacherMapper
 	tx := gormstarter.RawGormDB().Begin()
-	mpTx := mp.GetTxMapper(tx)
+	mpTx := mp.WithTxMapper(tx)
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
 	fmt.Println(mp.Save(&teacher))
+	fmt.Println(mp.ById(teacher.ID))
 	teacher = model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 13}
 	fmt.Println(mpTx.Save(&teacher))
 	fmt.Println(mpTx.Save(&teacher))
+	fmt.Println(mpTx.ById(teacher.ID))
+
 	tx.Commit()
 }

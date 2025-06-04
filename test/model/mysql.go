@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/golang-acexy/starter-gorm/gormstarter"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -42,4 +43,16 @@ func (Teacher) DBType() gormstarter.DBType {
 // TeacherMapper 声明Teacher 获取基于BaseMapper的能力
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]
+}
+
+func (t TeacherMapper) ById(id uint64) *Teacher {
+	r := new(Teacher)
+	_, _ = t.BaseMapper.SelectById(id, r)
+	return r
+}
+
+func (t TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
+	return TeacherMapper{
+		BaseMapper: t.BaseMapper.GetBaseMapperWithTx(tx),
+	}
 }
