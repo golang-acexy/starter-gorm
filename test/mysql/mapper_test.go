@@ -221,9 +221,8 @@ func TestCount(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	var mp model.TeacherMapper
-	mpTx := model.TeacherMapper{}
 	tx := gormstarter.RawGormDB().Begin()
-	mpTx.Tx = tx
+	mpTx := mp.WithTx(tx)
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
 	fmt.Println(mp.Save(&teacher))
 	teacher = model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 13}
