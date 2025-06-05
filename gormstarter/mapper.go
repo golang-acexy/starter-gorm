@@ -9,8 +9,8 @@ import (
 )
 
 func (b BaseMapper[T]) rawDB() *gorm.DB {
-	if b.Tx != nil {
-		return b.Tx
+	if b.tx != nil {
+		return b.tx
 	}
 	if len(gormDBs) == 1 {
 		return gormDBs[defaultDBType]
@@ -41,7 +41,7 @@ func (b BaseMapper[T]) Gorm() *gorm.DB {
 func (b BaseMapper[T]) GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T] {
 	return BaseMapper[T]{
 		model: b.model,
-		Tx:    tx,
+		tx:    tx,
 	}
 }
 
