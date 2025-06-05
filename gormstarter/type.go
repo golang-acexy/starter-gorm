@@ -71,7 +71,7 @@ func (t Timestamp) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type IBaseMapper[B BaseMapper[T], T IBaseModel] interface {
+type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 
 	// Gorm Mapper对应的原生Gorm操作能力
 	Gorm() *gorm.DB
