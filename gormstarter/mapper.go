@@ -200,10 +200,10 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber
 	return total, nil
 }
 
-// Save 保存数据 零值也将参与保存
+// Insert 保存数据 零值也将参与保存
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
-func (b BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error) {
+func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error) {
 	var db = b.rawDB()
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)
@@ -211,8 +211,8 @@ func (b BaseMapper[T]) Save(entity *T, excludeColumns ...string) (int64, error) 
 	return checkResult(db.Create(entity))
 }
 
-// SaveWithoutZeroField 保存数据 零值将不会参与保存
-func (b BaseMapper[T]) SaveWithoutZeroField(entity *T) (int64, error) {
+// InsertWithoutZeroField 保存数据 零值将不会参与保存
+func (b BaseMapper[T]) InsertWithoutZeroField(entity *T) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroField(entity)
 	if err != nil {
 		return 0, err
@@ -230,10 +230,10 @@ func (b BaseMapper[T]) SaveWithoutZeroField(entity *T) (int64, error) {
 	}
 }
 
-// SaveBatch 批量新增 零值也将参与保存
+// InsertBatch 批量新增 零值也将参与保存
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
-func (b BaseMapper[T]) SaveBatch(entities *[]*T, excludeColumns ...string) (int64, error) {
+func (b BaseMapper[T]) InsertBatch(entities *[]*T, excludeColumns ...string) (int64, error) {
 	var db = b.rawDB()
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)
@@ -241,18 +241,18 @@ func (b BaseMapper[T]) SaveBatch(entities *[]*T, excludeColumns ...string) (int6
 	return checkResult(db.Create(entities))
 }
 
-// SaveUseMap 通过Map类型保存数据
-func (b BaseMapper[T]) SaveUseMap(entity map[string]any) (int64, error) {
+// InsertUseMap 通过Map类型保存数据
+func (b BaseMapper[T]) InsertUseMap(entity map[string]any) (int64, error) {
 	if len(entity) == 0 {
 		return 0, errors.New("no field to save")
 	}
 	return checkResult(b.rawDB().Create(entity))
 }
 
-// SaveOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
+// InsertOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
 // exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
 // 仅根据主键冲突默认支持update 更多操作需要参阅 https://gorm.io/zh_CN/docs/create.html#upsert
-func (b BaseMapper[T]) SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
+func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
 	var db = b.rawDB()
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)

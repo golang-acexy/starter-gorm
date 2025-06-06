@@ -139,24 +139,24 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	// SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
 	SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error)
 
-	// Save 保存数据 零值也将参与保存
+	// Insert 保存数据 零值也将参与保存
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
-	Save(entity *T, excludeColumns ...string) (int64, error)
+	Insert(entity *T, excludeColumns ...string) (int64, error)
 
-	// SaveBatch 批量新增 零值也将参与保存
+	// InsertBatch 批量新增 零值也将参与保存
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
-	SaveBatch(entities *[]*T, excludeColumns ...string) (int64, error)
+	InsertBatch(entities *[]*T, excludeColumns ...string) (int64, error)
 
-	// SaveWithoutZeroField 保存数据 零值将不会参与保存
-	SaveWithoutZeroField(entity *T) (int64, error)
+	// InsertWithoutZeroField 保存数据 零值将不会参与保存
+	InsertWithoutZeroField(entity *T) (int64, error)
 
-	// SaveUseMap 通过Map类型保存数据
-	SaveUseMap(entity map[string]any) (int64, error)
+	// InsertUseMap 通过Map类型保存数据
+	InsertUseMap(entity map[string]any) (int64, error)
 
-	// SaveOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
+	// InsertOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
 	// exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
 	// 仅根据主键冲突默认支持update 更多操作需要参阅 https://gorm.io/zh_CN/docs/create.html#upsert
-	SaveOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error)
+	InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error)
 
 	// UpdateById 通过ID更新含零值字段
 	// updateColumns 手动指定需要更新的列

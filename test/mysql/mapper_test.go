@@ -13,7 +13,7 @@ import (
 func TestBaseSaveOne(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
-	fmt.Println(bm.Save(&teacher, "ClassNo"))
+	fmt.Println(bm.Insert(&teacher, "ClassNo"))
 	fmt.Println("saved id", teacher.ID)
 
 }
@@ -21,26 +21,26 @@ func TestBaseSaveOne(t *testing.T) {
 func TestSaveWithoutZero(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0, ClassNo: 12}
-	fmt.Println(bm.SaveWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroField(&teacher))
 	fmt.Println("saved id", teacher.ID)
 }
 
 func TestBaseSave(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0}
-	fmt.Println(bm.Save(&teacher))
+	fmt.Println(bm.Insert(&teacher))
 	fmt.Println("saved id", teacher.ID)
-	fmt.Println(bm.SaveWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroField(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
 	// 测试自动保存0值
 	teacher1 := model.Teacher{Sex: 1}
-	fmt.Println(bm.Save(&teacher1))
+	fmt.Println(bm.Insert(&teacher1))
 	fmt.Println("saved id", teacher1.ID)
 
 	// 测试排除指定的字段
 	teacher3 := model.Teacher{Sex: 1}
-	fmt.Println(bm.Save(&teacher3, "name"))
+	fmt.Println(bm.Insert(&teacher3, "name"))
 	fmt.Println("saved id", teacher3.ID)
 
 	// 测试主键冲突
@@ -48,7 +48,7 @@ func TestBaseSave(t *testing.T) {
 		Sex: 1,
 	}
 	teacher4.ID = 16
-	fmt.Println(bm.Save(&teacher4, "name"))
+	fmt.Println(bm.Insert(&teacher4, "name"))
 	fmt.Println("saved id", teacher4.ID)
 
 	// updateAndUpdate
@@ -56,7 +56,7 @@ func TestBaseSave(t *testing.T) {
 		Sex:  1,
 		Name: "name",
 	}
-	fmt.Println(bm.SaveOrUpdateByPrimaryKey(&teacher5, "create_time"))
+	fmt.Println(bm.InsertOrUpdateByPrimaryKey(&teacher5, "create_time"))
 	fmt.Println("saved id", teacher5.ID)
 }
 
@@ -65,7 +65,7 @@ func TestBatch(t *testing.T) {
 	teacher1 := model.Teacher{Sex: 1}
 	v := []*model.Teacher{&teacher, &teacher1}
 	bm := model.TeacherMapper{}
-	bm.SaveBatch(&v, "create_time")
+	bm.InsertBatch(&v, "create_time")
 
 }
 func TestModifyById(t *testing.T) {
@@ -225,11 +225,11 @@ func TestTransaction(t *testing.T) {
 	tx := gormstarter.RawGormDB().Begin()
 	mpTx := mp.WithTxMapper(tx)
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
-	fmt.Println(mp.Save(&teacher))
+	fmt.Println(mp.Insert(&teacher))
 	fmt.Println(mp.ById(teacher.ID))
 	teacher = model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 13}
-	fmt.Println(mpTx.Save(&teacher))
-	fmt.Println(mpTx.Save(&teacher))
+	fmt.Println(mpTx.Insert(&teacher))
+	fmt.Println(mpTx.Insert(&teacher))
 	fmt.Println(mpTx.ById(teacher.ID))
 
 	tx.Commit()
