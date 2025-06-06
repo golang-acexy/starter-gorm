@@ -90,7 +90,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	SelectById(id any, result *T) (int64, error)
 
 	// SelectByIds 通过主键查询数据
-	SelectByIds(id []interface{}, result *[]*T) (int64, error)
+	SelectByIds(id []any, result *[]*T) (int64, error)
 
 	// SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段
@@ -101,7 +101,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	SelectOneByMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error)
 
 	// SelectOneByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-	SelectOneByWhere(rawWhereSql string, result *T, args ...interface{}) (int64, error)
+	SelectOneByWhere(rawWhereSql string, result *T, args ...any) (int64, error)
 
 	// SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
 	SelectOneByGorm(result *T, rawDb func(*gorm.DB)) (int64, error)
@@ -115,7 +115,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	SelectByMap(condition map[string]any, orderBy string, result *[]*T, specifyColumns ...string) (int64, error)
 
 	// SelectByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-	SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...interface{}) (int64, error)
+	SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...any) (int64, error)
 
 	// SelectByGorm 通过原始Gorm查询数据
 	SelectByGorm(result *[]*T, rawDb func(*gorm.DB)) (int64, error)
@@ -127,7 +127,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	CountByMap(condition map[string]any) (int64, error)
 
 	// CountByWhere 通过原始SQL查询数据总数
-	CountByWhere(rawWhereSql string, args ...interface{}) (int64, error)
+	CountByWhere(rawWhereSql string, args ...any) (int64, error)
 
 	// CountByGorm 通过原始Gorm查询数据总数
 	CountByGorm(rawDb func(*gorm.DB)) (int64, error)
@@ -141,7 +141,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	SelectPageByMap(condition map[string]any, orderBy string, pageNumber, pageSize int, result *[]*T, specifyColumns ...string) (total int64, err error)
 
 	// SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-	SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error)
+	SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...any) (total int64, err error)
 
 	// Insert 保存数据 零值也将参与保存
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
@@ -184,7 +184,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	UpdateByMap(updated, condition map[string]any) (int64, error)
 
 	// UpdateByWhere 通过原始SQL查询条件，更新非零实体字段 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-	UpdateByWhere(updated *T, rawWhereSql string, args ...interface{}) (int64, error)
+	UpdateByWhere(updated *T, rawWhereSql string, args ...any) (int64, error)
 
 	// DeleteById 通过ID删除相关数据
 	DeleteById(id ...any) (int64, error)
@@ -193,7 +193,7 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 	DeleteByCond(condition *T) (int64, error)
 
 	// DeleteByWhere 通过原始SQL删除相关数据 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-	DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error)
+	DeleteByWhere(rawWhereSql string, args ...any) (int64, error)
 
 	// DeleteByMap 通过Map类型条件删除
 	DeleteByMap(condition map[string]any) (int64, error)

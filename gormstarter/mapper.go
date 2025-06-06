@@ -69,7 +69,7 @@ func (b BaseMapper[T]) SelectById(id any, result *T) (int64, error) {
 }
 
 // SelectByIds 通过主键查询数据
-func (b BaseMapper[T]) SelectByIds(id []interface{}, result *[]*T) (int64, error) {
+func (b BaseMapper[T]) SelectByIds(id []any, result *[]*T) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where("id in ?", id).Scan(result))
 }
 
@@ -86,7 +86,7 @@ func (b BaseMapper[T]) SelectOneByMap(condition map[string]any, result *T, speci
 }
 
 // SelectOneByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...interface{}) (int64, error) {
+func (b BaseMapper[T]) SelectOneByWhere(rawWhereSql string, result *T, args ...any) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where(rawWhereSql, args...).Scan(result))
 }
 
@@ -110,7 +110,7 @@ func (b BaseMapper[T]) SelectByMap(condition map[string]any, orderBy string, res
 }
 
 // SelectByWhere 通过原始Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...interface{}) (int64, error) {
+func (b BaseMapper[T]) SelectByWhere(rawWhereSql, orderBy string, result *[]*T, args ...any) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where(rawWhereSql, args...).Order(orderBy).Scan(result))
 }
 
@@ -136,7 +136,7 @@ func (b BaseMapper[T]) CountByMap(condition map[string]any) (int64, error) {
 }
 
 // CountByWhere 通过原始SQL查询数据总数
-func (b BaseMapper[T]) CountByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
+func (b BaseMapper[T]) CountByWhere(rawWhereSql string, args ...any) (int64, error) {
 	var count int64
 	_, err := checkResult(b.rawDB().Table(b.model.TableName()).Where(rawWhereSql, args...).Count(&count))
 	return count, err
@@ -192,7 +192,7 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, orderBy string,
 }
 
 // SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...interface{}) (total int64, err error) {
+func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...any) (total int64, err error) {
 	if pageNumber <= 0 || pageSize <= 0 {
 		return 0, errors.New("pageNumber or pageSize <= 0")
 	}
@@ -233,7 +233,7 @@ func (b BaseMapper[T]) InsertWithoutZeroField(entity *T) (int64, error) {
 	if len(nonZeroFields) == 1 {
 		return checkResult(b.rawDB().Table(b.model.TableName()).Select(nonZeroFields[0]).Create(entity))
 	} else {
-		nonZeroFieldsSlice := coll.SliceCollect(nonZeroFields[1:], func(t string) interface{} {
+		nonZeroFieldsSlice := coll.SliceCollect(nonZeroFields[1:], func(t string) any {
 			return t
 		})
 		return checkResult(b.rawDB().Table(b.model.TableName()).Select(nonZeroFields[0], nonZeroFieldsSlice...).Create(entity))
@@ -320,7 +320,7 @@ func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, er
 }
 
 // UpdateByWhere 通过原始SQL查询条件，更新非零实体字段 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSql string, args ...interface{}) (int64, error) {
+func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSql string, args ...any) (int64, error) {
 	return checkResult(b.rawDB().Table(b.model.TableName()).Where(rawWhereSql, args...).Updates(updated))
 }
 
@@ -335,7 +335,7 @@ func (b BaseMapper[T]) DeleteByCond(condition *T) (int64, error) {
 }
 
 // DeleteByWhere 通过原始SQL删除相关数据 Where SQL查询 只需要输入SQL语句和参数 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) DeleteByWhere(rawWhereSql string, args ...interface{}) (int64, error) {
+func (b BaseMapper[T]) DeleteByWhere(rawWhereSql string, args ...any) (int64, error) {
 	return checkResult(b.rawDB().Where(rawWhereSql, args...).Delete(b.model))
 }
 

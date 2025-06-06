@@ -132,7 +132,7 @@ func TestQueryById(t *testing.T) {
 func TestQueryByIds(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
-	fmt.Println(bm.SelectByIds([]interface{}{34, 36}, &teachers))
+	fmt.Println(bm.SelectByIds([]interface{}{1, 2}, &teachers))
 	fmt.Println(json.ToJsonFormat(teachers))
 }
 
