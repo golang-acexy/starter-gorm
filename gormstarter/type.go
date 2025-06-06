@@ -73,8 +73,11 @@ func (t Timestamp) UnmarshalJSON(data []byte) error {
 
 type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 
-	// Gorm Mapper对应的原生Gorm操作能力
-	Gorm() *gorm.DB
+	// GormWithTableName Mapper对应的原生Gorm操作能力 获取到的原始gorm.DB已经限定当前Mapper所对应的表名
+	GormWithTableName() *gorm.DB
+
+	// CurrentGorm 获取当前Mapper所使用的gorm.DB 如果当前Mapper已使用指定的事务，则返回当前Mapper所使用的事务，否则获取新的gorm.DB
+	CurrentGorm() *gorm.DB
 
 	// GetBaseMapperWithTx 获取携带指定事务的基础Mapper
 	GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T]

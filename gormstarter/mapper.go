@@ -32,9 +32,17 @@ func checkResult(rs *gorm.DB, txCheck ...bool) (int64, error) {
 	return rs.RowsAffected, nil
 }
 
-// Gorm Mapper对应的原生Gorm操作能力
-func (b BaseMapper[T]) Gorm() *gorm.DB {
+// GormWithTableName Mapper对应的原生Gorm操作能力 获取到的原始gorm.DB已经限定当前Mapper所对应的表名
+func (b BaseMapper[T]) GormWithTableName() *gorm.DB {
 	return b.rawDB().Table(b.model.TableName())
+}
+
+// CurrentGorm 获取当前Mapper所使用的gorm.DB 如果当前Mapper已使用指定的事务，则返回当前Mapper所使用的事务，否则获取新的gorm.DB
+func (b BaseMapper[T]) CurrentGorm() *gorm.DB {
+	if b.tx != nil {
+		return b.tx
+	}
+	return b.rawDB()
 }
 
 // GetBaseMapperWithTx 获取携带指定事务的基础Mapper
