@@ -200,6 +200,19 @@ func TestPageConditionMap(t *testing.T) {
 	}
 }
 
+func TestPageConditionGorm(t *testing.T) {
+	bm := model.TeacherMapper{}
+	teachers := new([]*model.Teacher)
+	fmt.Println(bm.SelectPageByGorm(func(db *gorm.DB) {
+		db.Where("name = 'mapper'")
+	}, func(db *gorm.DB) {
+		db.Where("name = 'mapper'").Limit(2)
+	}, teachers))
+	for _, teacher := range *teachers {
+		fmt.Printf("%+v\n", *teacher)
+	}
+}
+
 func TestUpdateByCondWithZeroField(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}

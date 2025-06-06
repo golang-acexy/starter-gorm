@@ -192,7 +192,7 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, orderBy string,
 }
 
 // SelectPageByWhere 通过原始SQL分页查询 rawWhereSql 例如 where a = 1 则只需要rawWhereSql = "a = ?" args = 1
-func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args ...any) (total int64, err error) {
+func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber, pageSize int, result *[]*T, args []any, specifyColumns ...string) (total int64, err error) {
 	if pageNumber <= 0 || pageSize <= 0 {
 		return 0, errors.New("pageNumber or pageSize <= 0")
 	}
@@ -203,7 +203,27 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSql, orderBy string, pageNumber
 	if total <= 0 {
 		return 0, nil
 	}
-	_, err = checkResult(b.rawDB().Table(b.model.TableName()).Where(rawWhereSql, args...).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	_, err = checkResult(b.rawDB().Table(b.model.TableName()).Select(specifyColumns).Where(rawWhereSql, args...).Order(orderBy).Limit(pageSize).Offset((pageNumber - 1) * pageSize).Scan(result))
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+// SelectPageByGorm 通过原始Gorm分页查询
+func (b BaseMapper[T]) SelectPageByGorm(countRawDb func(*gorm.DB), pageRawDb func(*gorm.DB), result *[]*T) (total int64, err error) {
+	var countDb = b.rawDB().Table(b.model.TableName())
+	countRawDb(countDb)
+	_, err = checkResult(countDb.Count(&total))
+	if err != nil {
+		return 0, err
+	}
+	if total <= 0 {
+		return 0, nil
+	}
+	selectDb := b.rawDB().Table(b.model.TableName())
+	pageRawDb(selectDb)
+	_, err = checkResult(selectDb.Scan(result))
 	if err != nil {
 		return 0, err
 	}
