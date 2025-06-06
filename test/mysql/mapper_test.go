@@ -244,6 +244,5 @@ func TestTransaction(t *testing.T) {
 	fmt.Println(mpTx.Insert(&teacher))
 	fmt.Println(mpTx.Insert(&teacher))
 	fmt.Println(mpTx.ById(teacher.ID))
-
 	tx.Commit()
 }
