@@ -1,6 +1,7 @@
 package gormstarter
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"github.com/acexy/golang-toolkit/util/json"
@@ -81,6 +82,9 @@ type IBaseMapper[M BaseMapper[T], T IBaseModel] interface {
 
 	// GetBaseMapperWithTx 获取携带指定事务的基础Mapper
 	GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T]
+
+	// NewBaseMapperWithTx 创建一个全新事务的基础Mapper
+	NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T]
 
 	// SelectById 通过主键查询数据
 	SelectById(id any, result *T) (int64, error)

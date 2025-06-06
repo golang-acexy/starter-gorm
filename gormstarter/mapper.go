@@ -1,6 +1,7 @@
 package gormstarter
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
@@ -51,6 +52,15 @@ func (b BaseMapper[T]) GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T] {
 		model: b.model,
 		tx:    tx,
 	}
+}
+
+// NewBaseMapperWithTx 创建一个全新事务的基础Mapper
+func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T] {
+	baseMapper := BaseMapper[T]{
+		model: b.model,
+	}
+	baseMapper.tx = baseMapper.rawDB().Begin(opts...)
+	return baseMapper
 }
 
 // SelectById 通过主键查询数据
