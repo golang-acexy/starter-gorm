@@ -6,7 +6,7 @@ import (
 )
 
 type Employee struct {
-	gormstarter.BaseModel[uint64]
+	ID uint64 `gorm:"<-:false;primaryKey" json:"id"`
 
 	CreatedAt gormstarter.Timestamp `gorm:"<-:false"`
 	UpdatedAt gormstarter.Timestamp `gorm:"<-:false"`
