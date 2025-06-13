@@ -243,7 +243,7 @@ func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error
 
 // InsertWithoutZeroField 保存数据 零值将不会参与保存
 func (b BaseMapper[T]) InsertWithoutZeroField(entity *T) (int64, error) {
-	nonZeroFields, err := reflect.NonZeroField(entity)
+	nonZeroFields, err := reflect.NonZeroFieldName(entity)
 	if err != nil {
 		return 0, err
 	}
@@ -299,7 +299,7 @@ func (b BaseMapper[T]) UpdateById(updated *T, updateColumns ...string) (int64, e
 // UpdateByIdWithoutZeroField 通过ID更新非零值字段
 // allowZeroFiledColumns 额外指定需要更新零值字段
 func (b BaseMapper[T]) UpdateByIdWithoutZeroField(updated *T, allowZeroFiledColumns ...string) (int64, error) {
-	nonZeroFields, err := reflect.NonZeroField(updated)
+	nonZeroFields, err := reflect.NonZeroFieldName(updated)
 	if err != nil {
 		return 0, err
 	}
@@ -323,7 +323,7 @@ func (b BaseMapper[T]) UpdateByCond(updated, condition *T, updateColumns ...stri
 
 // UpdateByCondWithZeroField 通过条件更新，并指定可以更新的零值字段
 func (b BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, allowZeroFiledColumns []string) (int64, error) {
-	nonZeroFields, err := reflect.NonZeroField(updated)
+	nonZeroFields, err := reflect.NonZeroFieldName(updated)
 	if err != nil {
 		return 0, err
 	}

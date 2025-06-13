@@ -3,7 +3,7 @@ module github.com/golang-acexy/starter-gorm
 go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.48
+	github.com/acexy/golang-toolkit v0.0.49-0.20250613071635-e8e796ca2e08
 	github.com/golang-acexy/starter-parent v0.1.15
 	github.com/lib/pq v1.10.9
 	github.com/sirupsen/logrus v1.9.3
