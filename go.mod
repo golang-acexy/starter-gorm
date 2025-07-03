@@ -3,7 +3,7 @@ module github.com/golang-acexy/starter-gorm
 go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.49-0.20250613071635-e8e796ca2e08
+	github.com/acexy/golang-toolkit v0.0.49
 	github.com/golang-acexy/starter-parent v0.1.15
 	github.com/lib/pq v1.10.9
 	github.com/sirupsen/logrus v1.9.3
@@ -16,6 +16,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.5 // indirect
