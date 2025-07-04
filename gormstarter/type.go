@@ -19,11 +19,6 @@ type Timestamp json.Timestamp
 
 type DBType string
 
-// Deprecated:已过时
-type BaseModel[IdType any] struct {
-	ID IdType `gorm:"<-:false;primaryKey" json:"id"`
-}
-
 type IBaseModel interface {
 	TableName() string
 }
