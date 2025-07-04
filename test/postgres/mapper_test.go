@@ -19,7 +19,7 @@ func TestSave(t *testing.T) {
 		Name:     "法外狂徒",
 		LeaderId: pq.Int32Array([]int32{1, 2, 3}),
 	}
-	fmt.Println(employeeMapper.SaveWithoutZeroField(save))
+	fmt.Println(employeeMapper.InsertWithoutZeroField(save))
 	fmt.Println(save.ID)
 }
 

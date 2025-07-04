@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/golang-acexy/starter-gorm/gormstarter"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -22,9 +23,9 @@ func (Student) TableName() string {
 
 // Teacher 继承BaseModel 并实现 IBaseModel
 type Teacher struct {
-	gormstarter.BaseModel[uint64]
-	CreatedAt gormstarter.Timestamp  `gorm:"column:create_time;<-:false" json:"createTime"`
-	UpdatedAt *gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"` // 指定update时自动更新时间
+	ID        uint64                `gorm:"<-:false;primaryKey" json:"id"`
+	CreatedAt gormstarter.Timestamp `gorm:"column:create_time;<-:false" json:"createTime"`
+	UpdatedAt gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"` // 指定update时自动更新时间
 	Name      string
 	Sex       uint
 	Age       uint
@@ -42,4 +43,16 @@ func (Teacher) DBType() gormstarter.DBType {
 // TeacherMapper 声明Teacher 获取基于BaseMapper的能力
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]
+}
+
+func (t TeacherMapper) ById(id uint64) *Teacher {
+	r := new(Teacher)
+	_, _ = t.BaseMapper.SelectById(id, r)
+	return r
+}
+
+func (t TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
+	return TeacherMapper{
+		t.BaseMapper.GetBaseMapperWithTx(tx),
+	}
 }
