@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"fmt"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-gorm/test/model"
 	"testing"
@@ -13,8 +14,9 @@ func init() {
 }
 
 func TestSelect(t *testing.T) {
-	var sutdent model.Student
-	gormstarter.RawGormDB().Model(model.Student{}).Where(&model.Student{Name: "1"}).Scan(&sutdent)
+	var sutdent *model.Student
+	gormstarter.RawGormDB().Model(model.Student{}).Where(&model.Student{Name: "王麻子"}).Scan(&sutdent)
+	fmt.Println(json.ToJson(sutdent))
 }
 
 func TestSave(t *testing.T) {
