@@ -3,12 +3,13 @@ package gormstarter
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/acexy/golang-toolkit/util/str"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"strconv"
-	"strings"
 )
 
 func openDB(config *GormConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
