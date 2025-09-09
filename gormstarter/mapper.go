@@ -3,10 +3,11 @@ package gormstarter
 import (
 	"database/sql"
 	"errors"
+	"math"
+
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
 	"gorm.io/gorm"
-	"math"
 )
 
 func (b BaseMapper[T]) rawDB() *gorm.DB {

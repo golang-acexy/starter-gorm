@@ -2,9 +2,10 @@ package gormstarter
 
 import (
 	"context"
+	"time"
+
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm/logger"
-	"time"
 )
 
 type logrusLogger struct {

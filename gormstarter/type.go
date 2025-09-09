@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"time"
+
 	"github.com/acexy/golang-toolkit/util/json"
 	"gorm.io/gorm"
-	"time"
 )
 
 const (
