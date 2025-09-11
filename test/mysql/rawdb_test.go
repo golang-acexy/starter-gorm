@@ -3,10 +3,11 @@ package mysql
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-gorm/test/model"
-	"testing"
 )
 
 func init() {

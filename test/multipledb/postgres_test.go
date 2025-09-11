@@ -2,10 +2,11 @@ package multipledb_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-gorm/test/model"
-	"testing"
 )
 
 var employeeMapper model.EmployeeMapper

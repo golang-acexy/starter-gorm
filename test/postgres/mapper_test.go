@@ -2,10 +2,11 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/test/model"
 	"github.com/lib/pq"
-	"testing"
 )
 
 func init() {
