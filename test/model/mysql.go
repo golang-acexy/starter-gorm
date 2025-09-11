@@ -1,9 +1,10 @@
 package model
 
 import (
+	"time"
+
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"gorm.io/gorm"
-	"time"
 )
 
 // student
