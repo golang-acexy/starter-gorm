@@ -3,7 +3,7 @@ module github.com/golang-acexy/starter-gorm
 go 1.24.6
 
 require (
-	github.com/acexy/golang-toolkit v0.0.53
+	github.com/acexy/golang-toolkit v0.0.54
 	github.com/golang-acexy/starter-parent v0.1.19
 	github.com/lib/pq v1.10.9
 	github.com/sirupsen/logrus v1.9.3
@@ -25,9 +25,9 @@ require (
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

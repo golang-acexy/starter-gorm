@@ -16,6 +16,7 @@ const defaultCharset = "utf8mb4"
 // 管理多类型数据库操作实例
 var gormDBs map[DBType]*gorm.DB
 var defaultDBType DBType
+var sqlLoggerLevel logger.Level
 
 func init() {
 	gormDBs = make(map[DBType]*gorm.DB)
@@ -31,9 +32,10 @@ type GormConfig struct {
 	Charset string // default charset : utf8mb4
 	DBType  DBType // 数据库类型 不指定时默认为 mysql
 
-	TimeUTC       bool // true: create/update UTC time; false LOCAL time
-	DryRun        bool // create sql not exec
-	UseDefaultLog bool
+	TimeUTC       bool         // true: create/update UTC time; false LOCAL time
+	DryRun        bool         // create sql not exec
+	UseDefaultLog bool         // 是否使用默认日志
+	SQLoggerLevel logger.Level // 仅当不使用默认日志时，才生效 仅指定为InfoLevel	DebugLevel	TraceLevel 时才生效，默认为 DebugLevel
 
 	// MYSQL 配置
 	MySQLUrlParam string // more Param such as `allowNativePasswords=false&checkConnLiveness=false`  https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name
@@ -69,6 +71,11 @@ func (g *GormStarter) getConfig() *GormConfig {
 				g.config.DBType = DBTypeMySQL
 			}
 		}
+	}
+	if g.config.SQLoggerLevel < logger.InfoLevel {
+		sqlLoggerLevel = logger.DebugLevel
+	} else {
+		sqlLoggerLevel = g.config.SQLoggerLevel
 	}
 	return g.config
 }

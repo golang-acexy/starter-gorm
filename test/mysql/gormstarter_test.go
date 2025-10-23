@@ -20,11 +20,12 @@ func init() {
 		&gormstarter.GormStarter{
 			LazyConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
-					Username: "root",
-					Password: "root",
-					Database: "test",
-					Host:     "127.0.0.1",
-					Port:     13306,
+					Username:      "root",
+					Password:      "root",
+					Database:      "test",
+					Host:          "127.0.0.1",
+					Port:          13306,
+					SQLoggerLevel: logger.InfoLevel,
 					InitFunc: func(instance *gorm.DB) {
 						fmt.Println(instance.Config)
 					},
