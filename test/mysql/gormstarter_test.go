@@ -25,9 +25,10 @@ func init() {
 					Database:      "test",
 					Host:          "127.0.0.1",
 					Port:          13306,
-					SQLoggerLevel: logger.InfoLevel,
+					SQLoggerLevel: logger.TraceLevel,
+					UseDefaultLog: true,
 					InitFunc: func(instance *gorm.DB) {
-						fmt.Println(instance.Config)
+						//fmt.Println(instance.Config)
 					},
 				}
 			},
