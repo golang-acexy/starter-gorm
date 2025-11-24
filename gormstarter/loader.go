@@ -100,7 +100,7 @@ func (g *GormStarter) Start() (interface{}, error) {
 		DryRun:                                   config.DryRun,
 	}
 	if !config.UseDefaultLog {
-		rawGormConfig.Logger = &logrusLogger{logger.Logrus()}
+		rawGormConfig.Logger = &logrusLogger{}
 	}
 	if config.TimeUTC {
 		rawGormConfig.NowFunc = func() time.Time {
