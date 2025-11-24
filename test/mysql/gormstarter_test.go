@@ -15,7 +15,7 @@ import (
 var starterLoader *parent.StarterLoader
 
 func init() {
-	logger.EnableConsole(logger.TraceLevel, false)
+	logger.EnableConsole(logger.DebugLevel)
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
 			LazyConfig: func() gormstarter.GormConfig {
@@ -25,9 +25,10 @@ func init() {
 					Database:      "test",
 					Host:          "127.0.0.1",
 					Port:          13306,
-					SQLoggerLevel: logger.InfoLevel,
+					SQLoggerLevel: logger.ErrorLevel,
 					InitFunc: func(instance *gorm.DB) {
-						fmt.Println(instance.Config)
+						fmt.Println(logger.IsLevelEnabled(logger.TraceLevel))
+						//fmt.Println(instance.Config)
 					},
 				}
 			},
