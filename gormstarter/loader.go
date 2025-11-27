@@ -34,7 +34,6 @@ type GormConfig struct {
 
 	TimeUTC       bool         // true: create/update UTC time; false LOCAL time
 	DryRun        bool         // create sql not exec
-	UseDefaultLog bool         // 是否使用默认日志
 	SQLoggerLevel logger.Level // 仅当不使用默认日志时，才生效 仅指定为InfoLevel	DebugLevel	TraceLevel 时才生效，默认为 DebugLevel
 
 	// MYSQL 配置
@@ -85,23 +84,21 @@ func (g *GormStarter) Setting() *parent.Setting {
 		return g.GormSetting
 	}
 	config := g.getConfig()
-	return parent.NewSetting("Gorm-Starter: "+string(config.DBType), 20, false, time.Second*30, func(instance interface{}) {
+	return parent.NewSetting("Gorm-Starter: "+string(config.DBType), 20, true, time.Second*30, func(instance any) {
 		if config.InitFunc != nil {
 			config.InitFunc(instance.(*gorm.DB))
 		}
 	})
 }
 
-func (g *GormStarter) Start() (interface{}, error) {
+func (g *GormStarter) Start() (any, error) {
 	var err error
 	config := g.getConfig()
 	rawGormConfig := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   config.DryRun,
 	}
-	if !config.UseDefaultLog {
-		rawGormConfig.Logger = &logrusLogger{}
-	}
+	rawGormConfig.Logger = &logrusLogger{}
 	if config.TimeUTC {
 		rawGormConfig.NowFunc = func() time.Time {
 			return time.Now().UTC()
