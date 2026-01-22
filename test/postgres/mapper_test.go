@@ -27,7 +27,7 @@ func TestSave(t *testing.T) {
 func TestSelect(t *testing.T) {
 	var employee model.Employee
 	fmt.Println(employeeMapper.SelectById(1, &employee))
-	fmt.Println(json.ToJson(employee))
+	fmt.Println(json.ToString(employee))
 
 	employee = model.Employee{
 		LeaderId: pq.Int32Array([]int32{1, 2, 3}),

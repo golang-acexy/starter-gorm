@@ -127,14 +127,14 @@ func TestQueryById(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teacher model.Teacher
 	fmt.Println(bm.SelectById(1, &teacher))
-	fmt.Println(json.ToJson(teacher))
+	fmt.Println(json.ToString(teacher))
 }
 
 func TestQueryByIds(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
 	fmt.Println(bm.SelectByIds([]interface{}{1, 2}, &teachers))
-	fmt.Println(json.ToJsonFormat(teachers))
+	fmt.Println(json.ToStringFormat(teachers))
 }
 
 func TestQueryByCondition(t *testing.T) {
@@ -143,7 +143,7 @@ func TestQueryByCondition(t *testing.T) {
 	// 由于Age是零值，不会用于查询
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
 	bm.SelectByCond(&model.Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
-	fmt.Println(json.ToJsonFormat(teachers))
+	fmt.Println(json.ToStringFormat(teachers))
 }
 
 func TestQueryByWhere(t *testing.T) {
@@ -160,7 +160,7 @@ func TestQueryByGorm(t *testing.T) {
 		db.Where("create_time < ?", time.Now())
 	})
 	fmt.Println(row)
-	fmt.Println(json.ToJsonFormat(teachers))
+	fmt.Println(json.ToStringFormat(teachers))
 }
 
 func TestQueryOneByGorm(t *testing.T) {
@@ -170,14 +170,14 @@ func TestQueryOneByGorm(t *testing.T) {
 		db.Where("id = 8")
 	})
 	fmt.Println(row)
-	fmt.Println(json.ToJsonFormat(teacher))
+	fmt.Println(json.ToStringFormat(teacher))
 }
 
 func TestQueryByConditionMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
 	bm.SelectByMap(map[string]any{"sex": 0}, "", teachers)
-	fmt.Println(json.ToJsonFormat(teachers))
+	fmt.Println(json.ToStringFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}

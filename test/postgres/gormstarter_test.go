@@ -66,5 +66,5 @@ func TestRegisterGorm(t *testing.T) {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	fmt.Println(json.ToJsonFormat(stopResult))
+	fmt.Println(json.ToString(stopResult))
 }
