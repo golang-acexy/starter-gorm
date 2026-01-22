@@ -15,13 +15,13 @@ func TestPostgresRaw(t *testing.T) {
 	var employees []model.Employee
 	db := gormstarter.RawPostgresGormDB()
 	db.Raw("select * from employee").Scan(&employees)
-	fmt.Println(json.ToJson(employees))
+	fmt.Println(json.ToString(employees))
 }
 
 func TestPostgresSelect(t *testing.T) {
 	var employee model.Employee
 	fmt.Println(employeeMapper.SelectById(1, &employee))
-	fmt.Println(json.ToJson(employee))
+	fmt.Println(json.ToString(employee))
 
 	employee = model.Employee{
 		LeaderId: []int32{1, 2, 3},

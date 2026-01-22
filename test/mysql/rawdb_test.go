@@ -17,7 +17,7 @@ func init() {
 func TestSelect(t *testing.T) {
 	var sutdent *model.Student
 	gormstarter.RawGormDB().Model(model.Student{}).Where(&model.Student{Name: "王麻子"}).Scan(&sutdent)
-	fmt.Println(json.ToJson(sutdent))
+	fmt.Println(json.ToString(sutdent))
 }
 
 func TestSave(t *testing.T) {
