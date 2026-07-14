@@ -1,72 +1,54 @@
 package mysql
 
 import (
-	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-parent/parent"
-	"gorm.io/gorm"
 )
 
 var starterLoader *parent.StarterLoader
 
 func init() {
 	logger.EnableConsole(logger.DebugLevel)
-	starterLoader = parent.NewStarterLoader([]parent.Starter{
+	starterLoader = parent.InitStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
 			LazyConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
+					MySQL: &gormstarter.MySQLConfig{
+						DatabaseConfig: gormstarter.DatabaseConfig{
 					Username:      "root",
 					Password:      "root",
 					Database:      "test",
 					Host:          "127.0.0.1",
 					Port:          13306,
-					SQLoggerLevel: logger.ErrorLevel,
-					InitFunc: func(instance *gorm.DB) {
-						fmt.Println(logger.IsLevelEnabled(logger.TraceLevel))
-						//fmt.Println(instance.Config)
+						},
 					},
+					SQLLoggerLevel: logger.ErrorLevel,
 				}
 			},
 		},
 	})
 }
 
-func TestRegisterGorm(t *testing.T) {
-
+func TestMain(m *testing.M) {
 	err := starterLoader.Start()
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		os.Exit(1)
 	}
-	db := gormstarter.RawGormDB()
-
-	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
-	go func() {
-		for i := 1; i <= 10; i++ {
-			go func() {
-				for {
-					var v int
-					tx := db.Raw("SELECT SLEEP(1)").Scan(&v)
-					if tx.Error != nil {
-						fmt.Printf("%+v \n", tx.Error)
-						return
-					}
-					fmt.Println(v)
-				}
-			}()
-		}
-	}()
-
-	time.Sleep(5 * time.Second)
-	stopResult, err := starterLoader.Stop(time.Second * 10)
+	code := m.Run()
+	_, err = starterLoader.StopAllByRegisteredOrder(10 * time.Second)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		os.Exit(1)
 	}
-	fmt.Println(json.ToStringFormat(stopResult))
+	os.Exit(code)
+}
+
+func TestRegisterGorm(t *testing.T) {
+	if gormstarter.RawMysqlGormDB() == nil {
+		t.Fatal("mysql database is not initialized")
+	}
 }

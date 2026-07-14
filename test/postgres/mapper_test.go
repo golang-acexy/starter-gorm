@@ -1,36 +1,37 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/test/model"
 	"github.com/lib/pq"
 )
 
-func init() {
-	_ = starterLoader.Start()
-}
-
 var employeeMapper model.EmployeeMapper
 
-func TestSave(t *testing.T) {
+func TestInsert(t *testing.T) {
 	save := &model.Employee{
 		Name:     "法外狂徒",
-		LeaderId: pq.Int32Array([]int32{1, 2, 3}),
+		LeaderID: pq.Int32Array([]int32{1, 2, 3}),
 	}
-	fmt.Println(employeeMapper.InsertWithoutZeroField(save))
-	fmt.Println(save.ID)
+	if _, err := employeeMapper.InsertWithoutZeroField(save); err != nil {
+		t.Fatal(err)
+	}
+	if save.ID == 0 {
+		t.Fatal("expected generated employee ID")
+	}
 }
 
-func TestSelect(t *testing.T) {
+func TestSelectByIDAndCond(t *testing.T) {
 	var employee model.Employee
-	fmt.Println(employeeMapper.SelectById(1, &employee))
-	fmt.Println(json.ToString(employee))
+	if _, err := employeeMapper.SelectByID(1, &employee); err != nil {
+		t.Fatal(err)
+	}
 
 	employee = model.Employee{
-		LeaderId: pq.Int32Array([]int32{1, 2, 3}),
+		LeaderID: []int32{1, 2, 3},
 	}
-	fmt.Println(employeeMapper.SelectOneByCond(&employee, &employee))
+	if _, err := employeeMapper.SelectOneByCond(&employee, &employee); err != nil {
+		t.Fatal(err)
+	}
 }
