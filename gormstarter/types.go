@@ -92,6 +92,9 @@ type QueryMapper[T Model] interface {
 	// SelectByIDs 通过主键查询数据
 	SelectByIDs(ids []any, result *[]*T) (int64, error)
 
+	// ExistsByID 判断指定主键的数据是否存在
+	ExistsByID(id any) (bool, error)
+
 	// SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段
 	SelectOneByCond(condition, result *T, specifyColumns ...string) (int64, error)
@@ -157,8 +160,8 @@ type InsertMapper[T Model] interface {
 	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
 	InsertBatch(entities []*T, excludeColumns ...string) (int64, error)
 
-	// InsertWithoutZeroField 保存数据 零值将不会参与保存
-	InsertWithoutZeroField(entity *T) (int64, error)
+	// InsertWithoutZeroFields 保存数据 零值字段将不会参与保存
+	InsertWithoutZeroFields(entity *T) (int64, error)
 
 	// InsertWithMap 通过 Map 类型保存数据
 	InsertWithMap(entity map[string]any) (int64, error)
@@ -175,9 +178,9 @@ type UpdateMapper[T Model] interface {
 	// updateColumns 手动指定需要更新的列
 	UpdateByID(updated *T, updateColumns ...string) (int64, error)
 
-	// UpdateByIDWithoutZeroField 通过ID更新非零值字段
+	// UpdateByIDWithoutZeroFields 通过ID更新非零值字段
 	// allowZeroFieldColumns 额外指定需要更新零值字段
-	UpdateByIDWithoutZeroField(updated *T, allowZeroFieldColumns ...string) (int64, error)
+	UpdateByIDWithoutZeroFields(updated *T, allowZeroFieldColumns ...string) (int64, error)
 
 	// UpdateByIDWithMap 通过 ID 更新 Map 中指定的列和值
 	UpdateByIDWithMap(updated map[string]any, id any) (int64, error)
@@ -186,8 +189,8 @@ type UpdateMapper[T Model] interface {
 	// updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
 	UpdateByCond(updated, condition *T, updateColumns ...string) (int64, error)
 
-	// UpdateByCondWithZeroField 通过条件更新，并指定可以更新的零值字段
-	UpdateByCondWithZeroField(updated, condition *T, allowZeroFieldColumns ...string) (int64, error)
+	// UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
+	UpdateByCondWithZeroFields(updated, condition *T, allowZeroFieldColumns ...string) (int64, error)
 
 	// UpdateByMap 通过Map类型条件更新
 	UpdateByMap(updated, condition map[string]any) (int64, error)

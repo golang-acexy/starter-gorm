@@ -14,7 +14,7 @@ func TestInsert(t *testing.T) {
 		Name:     "法外狂徒",
 		LeaderID: pq.Int32Array([]int32{1, 2, 3}),
 	}
-	if _, err := employeeMapper.InsertWithoutZeroField(save); err != nil {
+	if _, err := employeeMapper.InsertWithoutZeroFields(save); err != nil {
 		t.Fatal(err)
 	}
 	if save.ID == 0 {
@@ -33,5 +33,35 @@ func TestSelectByIDAndCond(t *testing.T) {
 	}
 	if _, err := employeeMapper.SelectOneByCond(&employee, &employee); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestExistsByID(t *testing.T) {
+	employee := &model.Employee{
+		Name:     "exists",
+		LeaderID: pq.Int32Array([]int32{1}),
+	}
+	if _, err := employeeMapper.Insert(employee); err != nil {
+		t.Fatal(err)
+	}
+	defer employeeMapper.DeleteByID(employee.ID)
+
+	exists, err := employeeMapper.ExistsByID(employee.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("expected inserted employee to exist")
+	}
+
+	if _, err = employeeMapper.DeleteByID(employee.ID); err != nil {
+		t.Fatal(err)
+	}
+	exists, err = employeeMapper.ExistsByID(employee.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("expected deleted employee not to exist")
 	}
 }

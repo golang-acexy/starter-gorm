@@ -1,4 +1,4 @@
-package multipledb_test
+package multipledb
 
 import (
 	"os"

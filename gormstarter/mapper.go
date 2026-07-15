@@ -91,6 +91,19 @@ func (b BaseMapper[T]) SelectByIDs(ids []any, result *[]*T) (int64, error) {
 	return checkResult(db.Where("id in ?", ids).Scan(result))
 }
 
+// ExistsByID 判断指定主键的数据是否存在
+func (b BaseMapper[T]) ExistsByID(id any) (bool, error) {
+	db, err := b.tableDB()
+	if err != nil {
+		return false, err
+	}
+	var count int64
+	if err = db.Where("id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
 // specifyColumns 指定只需要查询的数据库字段
 func (b BaseMapper[T]) SelectOneByCond(condition, result *T, specifyColumns ...string) (int64, error) {
@@ -307,8 +320,8 @@ func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error
 	return checkResult(db.Create(entity))
 }
 
-// InsertWithoutZeroField 保存数据 零值将不会参与保存
-func (b BaseMapper[T]) InsertWithoutZeroField(entity *T) (int64, error) {
+// InsertWithoutZeroFields 保存数据 零值字段将不会参与保存
+func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroFieldName(entity)
 	if err != nil {
 		return 0, err
@@ -370,9 +383,9 @@ func (b BaseMapper[T]) UpdateByID(updated *T, updateColumns ...string) (int64, e
 	return checkResult(db.Select(updateColumns).Updates(updated))
 }
 
-// UpdateByIDWithoutZeroField 通过ID更新非零值字段
+// UpdateByIDWithoutZeroFields 通过ID更新非零值字段
 // allowZeroFieldColumns 额外指定需要更新零值字段
-func (b BaseMapper[T]) UpdateByIDWithoutZeroField(updated *T, allowZeroFieldColumns ...string) (int64, error) {
+func (b BaseMapper[T]) UpdateByIDWithoutZeroFields(updated *T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroFieldName(updated)
 	if err != nil {
 		return 0, err
@@ -404,8 +417,8 @@ func (b BaseMapper[T]) UpdateByCond(updated, condition *T, updateColumns ...stri
 	return checkResult(db.Select(updateColumns).Where(condition).Updates(updated))
 }
 
-// UpdateByCondWithZeroField 通过条件更新，并指定可以更新的零值字段
-func (b BaseMapper[T]) UpdateByCondWithZeroField(updated, condition *T, allowZeroFieldColumns ...string) (int64, error) {
+// UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
+func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated, condition *T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroFieldName(updated)
 	if err != nil {
 		return 0, err

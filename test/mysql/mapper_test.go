@@ -19,10 +19,10 @@ func TestInsert(t *testing.T) {
 
 }
 
-func TestInsertWithoutZeroField(t *testing.T) {
+func TestInsertWithoutZeroFields(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0, ClassNo: 12}
-	fmt.Println(bm.InsertWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroFields(&teacher))
 	fmt.Println("saved id", teacher.ID)
 }
 
@@ -36,7 +36,7 @@ func TestInsertVariants(t *testing.T) {
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0}
 	fmt.Println(bm.Insert(&teacher))
 	fmt.Println("saved id", teacher.ID)
-	fmt.Println(bm.InsertWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroFields(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
 	// 测试自动保存0值
@@ -84,12 +84,46 @@ func TestUpdateByID(t *testing.T) {
 	// 通过指定字段更新 可以指定零值
 	fmt.Println(bm.UpdateByID(&updated, "sex", "name", "age"))
 
-	fmt.Println(bm.UpdateByIDWithoutZeroField(&updated, "sex"))
+	fmt.Println(bm.UpdateByIDWithoutZeroFields(&updated, "sex"))
 }
 
 func TestUpdateByIDWithMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	fmt.Println(bm.UpdateByIDWithMap(map[string]any{"name": "Miss A", "sex": 0}, 132))
+}
+
+func TestUpdateZeroFieldsSelection(t *testing.T) {
+	bm := model.TeacherMapper{}
+	teacher := model.Teacher{Name: "zf", Age: 21, Sex: 1, ClassNo: 3}
+	if _, err := bm.Insert(&teacher); err != nil {
+		t.Fatal(err)
+	}
+	defer bm.DeleteByID(teacher.ID)
+
+	updatedByID := model.Teacher{ID: teacher.ID, Name: "zfid", Age: 0, Sex: 0}
+	if _, err := bm.UpdateByIDWithoutZeroFields(&updatedByID, "sex"); err != nil {
+		t.Fatal(err)
+	}
+	var result model.Teacher
+	if _, err := bm.SelectByID(teacher.ID, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Name != updatedByID.Name || result.Age != teacher.Age || result.Sex != 0 {
+		t.Fatalf("unexpected ID update result: %+v", result)
+	}
+
+	updatedByCond := model.Teacher{Name: "zfcond", ClassNo: 0}
+	condition := model.Teacher{ID: teacher.ID}
+	if _, err := bm.UpdateByCondWithZeroFields(&updatedByCond, &condition, "class_no"); err != nil {
+		t.Fatal(err)
+	}
+	result = model.Teacher{}
+	if _, err := bm.SelectByID(teacher.ID, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Name != updatedByCond.Name || result.Age != teacher.Age || result.ClassNo != 0 {
+		t.Fatalf("unexpected condition update result: %+v", result)
+	}
 }
 
 func TestUpdateByWhere(t *testing.T) {
@@ -147,6 +181,34 @@ func TestSelectByIDs(t *testing.T) {
 	var teachers []*model.Teacher
 	fmt.Println(bm.SelectByIDs([]interface{}{1, 2}, &teachers))
 	fmt.Println(json.ToStringFormat(teachers))
+}
+
+func TestExistsByID(t *testing.T) {
+	bm := model.TeacherMapper{}
+	teacher := model.Teacher{Name: "exists", Age: 18}
+	if _, err := bm.Insert(&teacher); err != nil {
+		t.Fatal(err)
+	}
+	defer bm.DeleteByID(teacher.ID)
+
+	exists, err := bm.ExistsByID(teacher.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("expected inserted teacher to exist")
+	}
+
+	if _, err = bm.DeleteByID(teacher.ID); err != nil {
+		t.Fatal(err)
+	}
+	exists, err = bm.ExistsByID(teacher.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("expected deleted teacher not to exist")
+	}
 }
 
 func TestSelectByCond(t *testing.T) {
@@ -232,11 +294,11 @@ func TestSelectPageByGorm(t *testing.T) {
 	}
 }
 
-func TestUpdateByCondWithZeroField(t *testing.T) {
+func TestUpdateByCondWithZeroFields(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
 	condition := model.Teacher{Name: "2", Age: 0}
-	fmt.Println(bm.UpdateByCondWithZeroField(&updated, &condition, "ClassNo"))
+	fmt.Println(bm.UpdateByCondWithZeroFields(&updated, &condition, "ClassNo"))
 }
 
 func TestUpdateByMap(t *testing.T) {

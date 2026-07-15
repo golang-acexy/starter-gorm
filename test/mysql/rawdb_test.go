@@ -16,7 +16,7 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-func TestInsert(t *testing.T) {
+func TestRawDBInsert(t *testing.T) {
 	// 分别处于不通的事务中
 	stu := &model.Student{Name: "王麻子"}
 	result := gormstarter.RawGormDB().Create(stu)
