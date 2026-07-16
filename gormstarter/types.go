@@ -77,11 +77,11 @@ func (t *Timestamp) UnmarshalJSON(data []byte) error {
 
 // RawMapper 提供当前 Mapper 对应的原生 GORM 操作能力。
 type RawMapper interface {
-	// GormWithTableName Mapper对应的原生Gorm操作能力 获取到的原始gorm.DB已经限定当前Mapper所对应的表名
-	GormWithTableName() *gorm.DB
+	// TableGormDB 获取已限定当前 Mapper 表名的原生 gorm.DB。
+	TableGormDB() *gorm.DB
 
-	// CurrentGorm 获取当前Mapper所使用的gorm.DB 如果当前Mapper已使用指定的事务，则返回当前Mapper所使用的事务，否则获取新的gorm.DB
-	CurrentGorm() *gorm.DB
+	// CurrentGormDB 获取当前 Mapper 使用的 gorm.DB；绑定事务时返回该事务，否则返回新的 gorm.DB。
+	CurrentGormDB() *gorm.DB
 }
 
 // QueryMapper 提供查询能力。
