@@ -44,13 +44,15 @@ func checkResult(rs *gorm.DB) (int64, error) {
 }
 
 // GormWithTableName Mapper对应的原生Gorm操作能力 获取到的原始gorm.DB已经限定当前Mapper所对应的表名
-func (b BaseMapper[T]) GormWithTableName() (*gorm.DB, error) {
-	return b.tableDB()
+func (b BaseMapper[T]) GormWithTableName() *gorm.DB {
+	db, _ := b.tableDB()
+	return db
 }
 
 // CurrentGorm 获取当前Mapper所使用的gorm.DB 如果当前Mapper已使用指定的事务，则返回当前Mapper所使用的事务，否则获取新的gorm.DB
-func (b BaseMapper[T]) CurrentGorm() (*gorm.DB, error) {
-	return b.rawDB()
+func (b BaseMapper[T]) CurrentGorm() *gorm.DB {
+	db, _ := b.rawDB()
+	return db
 }
 
 // GetBaseMapperWithTx 获取绑定指定事务的基础 Mapper
@@ -62,19 +64,13 @@ func (b BaseMapper[T]) GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T] {
 }
 
 // NewBaseMapperWithTx 创建一个全新事务的基础 Mapper
-func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) (BaseMapper[T], error) {
+func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T] {
 	baseMapper := BaseMapper[T]{
 		model: b.model,
 	}
-	db, err := baseMapper.rawDB()
-	if err != nil {
-		return baseMapper, err
-	}
+	db, _ := baseMapper.rawDB()
 	baseMapper.tx = db.Begin(opts...)
-	if baseMapper.tx.Error != nil {
-		return baseMapper, baseMapper.tx.Error
-	}
-	return baseMapper, nil
+	return baseMapper
 }
 
 // SelectByID 通过主键查询数据
