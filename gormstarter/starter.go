@@ -134,7 +134,7 @@ func (g *GormStarter) Start() (any, error) {
 	} else {
 		defaultDBType = DBTypePostgres
 	}
-	logger.Logrus().WithField("databaseTypes", databaseTypes(databases)).Infoln("Gorm-Starter databases started")
+	logger.Logrus().Infoln("Gorm-Starter databases started", "databaseTypes", databaseTypes(databases))
 	return cloneDatabases(databases), nil
 }
 
@@ -203,7 +203,7 @@ func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 	for {
 		if databasesClosed(databases) {
 			clearDatabases()
-			logger.Logrus().WithField("databaseTypes", databaseTypes(databases)).Infoln("Gorm-Starter databases stopped")
+			logger.Logrus().Infoln("Gorm-Starter databases stopped", "databaseTypes", databaseTypes(databases))
 			return true, true, nil
 		}
 		select {
