@@ -123,7 +123,7 @@ func (b BaseMapper[T]) SelectOneByMap(condition map[string]any, result *T, speci
 func (b BaseMapper[T]) SelectOneByWhere(rawWhereSQL string, result *T, args ...any) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
-	return checkResult(db.Where(rawWhereSQL, args...).Limit(1).Scan(result))
+	return checkResult(db.Where(rawWhereSQL, args...).Scan(result))
 }
 
 // SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
@@ -131,7 +131,7 @@ func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, 
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	rawDB(db)
-	return checkResult(db.Limit(1).Scan(result))
+	return checkResult(db.Scan(result))
 }
 
 // SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
