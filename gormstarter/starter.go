@@ -77,7 +77,7 @@ func (g *GormStarter) Setting() *parent.Setting {
 		return g.GormSetting
 	}
 	config := g.getConfig()
-	return parent.NewSetting("Gorm-Starter", 20, true, time.Second*30, func(instance any) {
+	return parent.NewSetting("Gorm-Starter", false, 20, true, time.Second*30, func(instance any) {
 		if config.InitFunc != nil {
 			config.InitFunc(instance.(map[DBType]*gorm.DB))
 		}

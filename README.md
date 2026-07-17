@@ -2,9 +2,15 @@
 
 `starter-gorm` is the relational database starter for the golang-acexy starter/cloud ecosystem. It integrates GORM with the shared starter lifecycle, provides managed MySQL and PostgreSQL connections, routes models to the correct database type, and exposes a generic `BaseMapper` for common SQL operations.
 
+## Ecosystem Role
+
+Use this starter for direct relational persistence and SQL-oriented Mapper APIs. `cloud-database/rds` builds business-oriented Repository APIs on top of these mappers without taking ownership of database lifecycle.
+
 ## Requirements
 
 Current module Go version: `1.25.8`.
+
+## Installation
 
 ```bash
 go get github.com/golang-acexy/starter-gorm
@@ -327,15 +333,8 @@ return tx.Commit().Error
 Use `NewBaseMapperWithTx` when a new transaction should be created from the database selected for the mapper model:
 
 ```go
-txMapper, err := mapper.NewBaseMapperWithTx()
-if err != nil {
-	return err
-}
-
-tx, err := txMapper.CurrentGorm()
-if err != nil {
-	return err
-}
+txMapper := mapper.NewBaseMapperWithTx()
+tx := txMapper.CurrentGormDB()
 defer tx.Rollback()
 ```
 
@@ -361,11 +360,11 @@ Raw accessors return `nil` when the requested database is not initialized. Mappe
 For mapper-scoped raw access:
 
 ```go
-tableDB, err := mapper.GormWithTableName()
-currentDB, err := mapper.CurrentGorm()
+tableDB := mapper.TableGormDB()
+currentDB := mapper.CurrentGormDB()
 ```
 
-`GormWithTableName` applies the model table name. `CurrentGorm` returns the bound transaction when present, otherwise the model-selected database.
+`TableGormDB` applies the model table name. `CurrentGormDB` returns the bound transaction when present, otherwise the model-selected database. The starter lifecycle guarantees these mapper accessors are used only after database startup.
 
 ## Common Errors
 
@@ -388,3 +387,4 @@ currentDB, err := mapper.CurrentGorm()
 - `BaseMapper` is a value type. Transaction helpers return a new mapper rather than modifying the original mapper.
 - Condition structs ignore zero values according to GORM behavior. Use map-based or explicit-column APIs when zero is meaningful.
 - `Timestamp` supports SQL scanning, driver values, and JSON timestamp conversion through the shared toolkit.
+- The standard GORM starter does not allow parent-managed restart after successful shutdown.
