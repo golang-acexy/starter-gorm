@@ -9,8 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type logrusLogger struct {
-}
+type logrusLogger struct{}
 
 func (l *logrusLogger) LogMode(level logger.LogLevel) logger.Interface {
 	return l

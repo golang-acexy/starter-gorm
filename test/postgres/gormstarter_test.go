@@ -1,11 +1,10 @@
 package test
 
 import (
-	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-gorm/gormstarter"
 	"github.com/golang-acexy/starter-parent/parent"
 	"gorm.io/gorm"
@@ -15,18 +14,21 @@ import (
 var starterLoader *parent.StarterLoader
 
 func init() {
-	starterLoader = parent.NewStarterLoader([]parent.Starter{
+	starterLoader = parent.InitStarterLoader([]parent.Starter{
 		&gormstarter.GormStarter{
 			LazyConfig: func() gormstarter.GormConfig {
 				return gormstarter.GormConfig{
+					Postgres: &gormstarter.PostgresConfig{
+						DatabaseConfig: gormstarter.DatabaseConfig{
 					Username: "postgres",
 					Password: "tech-acexy",
 					Database: "postgres",
 					Host:     "127.0.0.1",
 					Port:     5432,
-					DBType:   gormstarter.DBTypePostgres,
-					InitFunc: func(instance *gorm.DB) {
-						instance.Logger.LogMode(logger.Info)
+						},
+					},
+					InitFunc: func(instance map[gormstarter.DBType]*gorm.DB) {
+						instance[gormstarter.DBTypePostgres].Logger.LogMode(logger.Info)
 					},
 				}
 			},
@@ -34,37 +36,21 @@ func init() {
 	})
 }
 
-func TestRegisterGorm(t *testing.T) {
-
+func TestMain(m *testing.M) {
 	err := starterLoader.Start()
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		os.Exit(1)
 	}
-	db := gormstarter.RawGormDB()
-
-	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
-	go func() {
-		for i := 1; i <= 10; i++ {
-			go func() {
-				for {
-					var v string
-					tx := db.Raw("SELECT pg_sleep(1)").Scan(&v)
-					if tx.Error != nil {
-						fmt.Printf("%+v \n", tx.Error)
-						return
-					}
-					fmt.Println(v)
-				}
-			}()
-		}
-	}()
-
-	time.Sleep(5 * time.Second)
-	stopResult, err := starterLoader.Stop(time.Second * 10)
+	code := m.Run()
+	_, err = starterLoader.StopAllByRegisteredOrder(10 * time.Second)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		os.Exit(1)
 	}
-	fmt.Println(json.ToString(stopResult))
+	os.Exit(code)
+}
+
+func TestRegisterGorm(t *testing.T) {
+	if gormstarter.RawPostgresGormDB() == nil {
+		t.Fatal("postgres database is not initialized")
+	}
 }

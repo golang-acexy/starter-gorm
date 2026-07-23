@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestBaseSaveOne(t *testing.T) {
+func TestInsert(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
 	fmt.Println(bm.Insert(&teacher, "ClassNo"))
@@ -19,19 +19,24 @@ func TestBaseSaveOne(t *testing.T) {
 
 }
 
-func TestSaveWithoutZero(t *testing.T) {
+func TestInsertWithoutZeroFields(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0, ClassNo: 12}
-	fmt.Println(bm.InsertWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroFields(&teacher))
 	fmt.Println("saved id", teacher.ID)
 }
 
-func TestBaseSave(t *testing.T) {
+func TestInsertWithMap(t *testing.T) {
+	bm := model.TeacherMapper{}
+	fmt.Println(bm.InsertWithMap(map[string]any{"name": "mapper", "age": 12, "sex": 1, "class_no": 12}))
+}
+
+func TestInsertVariants(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 0}
 	fmt.Println(bm.Insert(&teacher))
 	fmt.Println("saved id", teacher.ID)
-	fmt.Println(bm.InsertWithoutZeroField(&teacher))
+	fmt.Println(bm.InsertWithoutZeroFields(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
 	// 测试自动保存0值
@@ -66,43 +71,84 @@ func TestBatch(t *testing.T) {
 	teacher1 := model.Teacher{Sex: 1}
 	v := []*model.Teacher{&teacher, &teacher1}
 	bm := model.TeacherMapper{}
-	bm.InsertBatch(&v, "create_time")
+	bm.InsertBatch(v, "create_time")
 
 }
-func TestModifyById(t *testing.T) {
+func TestUpdateByID(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "update", Age: 21, Sex: 0}
 
 	updated.ID = 47
 	// 由于sex是零值并不会被用于更新的指定
-	fmt.Println(bm.UpdateById(&updated))
+	fmt.Println(bm.UpdateByID(&updated))
 	// 通过指定字段更新 可以指定零值
-	fmt.Println(bm.UpdateById(&updated, "sex", "name", "age"))
+	fmt.Println(bm.UpdateByID(&updated, "sex", "name", "age"))
 
-	fmt.Println(bm.UpdateByIdWithoutZeroField(&updated, "sex"))
+	fmt.Println(bm.UpdateByIDWithoutZeroFields(&updated, "sex"))
 }
 
-func TestModifyMapById(t *testing.T) {
+func TestUpdateByIDWithMap(t *testing.T) {
 	bm := model.TeacherMapper{}
-	fmt.Println(bm.UpdateByIdUseMap(map[string]any{"name": "Miss A", "sex": 0}, 132))
+	fmt.Println(bm.UpdateByIDWithMap(map[string]any{"name": "Miss A", "sex": 0}, 132))
 }
 
-func TestModifyByWhere(t *testing.T) {
+func TestUpdateZeroFieldsSelection(t *testing.T) {
+	bm := model.TeacherMapper{}
+	teacher := model.Teacher{Name: "zf", Age: 21, Sex: 1, ClassNo: 3}
+	if _, err := bm.Insert(&teacher); err != nil {
+		t.Fatal(err)
+	}
+	defer bm.DeleteByID(teacher.ID)
+
+	updatedByID := model.Teacher{ID: teacher.ID, Name: "zfid", Age: 0, Sex: 0}
+	if _, err := bm.UpdateByIDWithoutZeroFields(&updatedByID, "sex"); err != nil {
+		t.Fatal(err)
+	}
+	var result model.Teacher
+	if _, err := bm.SelectByID(teacher.ID, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Name != updatedByID.Name || result.Age != teacher.Age || result.Sex != 0 {
+		t.Fatalf("unexpected ID update result: %+v", result)
+	}
+
+	updatedByCond := model.Teacher{Name: "zfcond", ClassNo: 0}
+	condition := model.Teacher{ID: teacher.ID}
+	if _, err := bm.UpdateByCondWithZeroFields(&updatedByCond, &condition, "class_no"); err != nil {
+		t.Fatal(err)
+	}
+	result = model.Teacher{}
+	if _, err := bm.SelectByID(teacher.ID, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Name != updatedByCond.Name || result.Age != teacher.Age || result.ClassNo != 0 {
+		t.Fatalf("unexpected condition update result: %+v", result)
+	}
+}
+
+func TestUpdateByWhere(t *testing.T) {
 	bm := model.TeacherMapper{}
 	fmt.Println(bm.UpdateByWhere(&model.Teacher{Name: "Alex", Age: 0}, "name = ? and age > ?", "mapper", 5))
 }
 
-func TestRemoveById(t *testing.T) {
+func TestDeleteByID(t *testing.T) {
 	bm := model.TeacherMapper{}
-	fmt.Println(bm.DeleteById(1))
+	fmt.Println(bm.DeleteByID(1))
 }
 
-func TestRemoveByWhere(t *testing.T) {
+func TestDeleteByIDs(t *testing.T) {
+	bm := model.TeacherMapper{}
+	if _, err := bm.DeleteByIDs([]any{1, 2}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeleteByWhere(t *testing.T) {
 	bm := model.TeacherMapper{}
 	fmt.Println(bm.DeleteByWhere("name = ? and age > ?", "Alex", 5))
 }
 
-func TestRemoveByCondition(t *testing.T) {
+func TestDeleteByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	fmt.Println(bm.DeleteByCond(&model.Teacher{
 		Name: "mapper",
@@ -111,33 +157,61 @@ func TestRemoveByCondition(t *testing.T) {
 	}))
 }
 
-func TestRemoveByMap(t *testing.T) {
+func TestDeleteByMap(t *testing.T) {
 	var bm model.TeacherMapper
 	fmt.Println(bm.DeleteByMap(map[string]any{"name": "mapper", "sex": 1}))
 }
 
-func TestModifyByCondition(t *testing.T) {
+func TestUpdateByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
 	condition := model.Teacher{Name: "2", Age: 0}
 	fmt.Println(bm.UpdateByCond(&updated, &condition))
 }
 
-func TestQueryById(t *testing.T) {
+func TestSelectByID(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teacher model.Teacher
-	fmt.Println(bm.SelectById(1, &teacher))
+	fmt.Println(bm.SelectByID(1, &teacher))
 	fmt.Println(json.ToString(teacher))
 }
 
-func TestQueryByIds(t *testing.T) {
+func TestSelectByIDs(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
-	fmt.Println(bm.SelectByIds([]interface{}{1, 2}, &teachers))
+	fmt.Println(bm.SelectByIDs([]interface{}{1, 2}, &teachers))
 	fmt.Println(json.ToStringFormat(teachers))
 }
 
-func TestQueryByCondition(t *testing.T) {
+func TestExistsByID(t *testing.T) {
+	bm := model.TeacherMapper{}
+	teacher := model.Teacher{Name: "exists", Age: 18}
+	if _, err := bm.Insert(&teacher); err != nil {
+		t.Fatal(err)
+	}
+	defer bm.DeleteByID(teacher.ID)
+
+	exists, err := bm.ExistsByID(teacher.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("expected inserted teacher to exist")
+	}
+
+	if _, err = bm.DeleteByID(teacher.ID); err != nil {
+		t.Fatal(err)
+	}
+	exists, err = bm.ExistsByID(teacher.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("expected deleted teacher not to exist")
+	}
+}
+
+func TestSelectByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
 	// 由于Age是零值，不会用于查询
@@ -146,14 +220,14 @@ func TestQueryByCondition(t *testing.T) {
 	fmt.Println(json.ToStringFormat(teachers))
 }
 
-func TestQueryByWhere(t *testing.T) {
+func TestSelectByWhere(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
 	bm.SelectByWhere("name =? and age > ?", "", teachers, "mapper", 5)
 	fmt.Println(teachers)
 }
 
-func TestQueryByGorm(t *testing.T) {
+func TestSelectByGorm(t *testing.T) {
 	var bm model.TeacherMapper
 	teachers := new([]*model.Teacher)
 	row, _ := bm.SelectByGorm(teachers, func(db *gorm.DB) {
@@ -163,7 +237,7 @@ func TestQueryByGorm(t *testing.T) {
 	fmt.Println(json.ToStringFormat(teachers))
 }
 
-func TestQueryOneByGorm(t *testing.T) {
+func TestSelectOneByGorm(t *testing.T) {
 	var bm model.TeacherMapper
 	var teacher model.Teacher
 	row, _ := bm.SelectOneByGorm(&teacher, func(db *gorm.DB) {
@@ -173,7 +247,7 @@ func TestQueryOneByGorm(t *testing.T) {
 	fmt.Println(json.ToStringFormat(teacher))
 }
 
-func TestQueryByConditionMap(t *testing.T) {
+func TestSelectByMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
 	bm.SelectByMap(map[string]any{"sex": 0}, "", teachers)
@@ -183,25 +257,31 @@ func TestQueryByConditionMap(t *testing.T) {
 	}
 }
 
-func TestPageCondition(t *testing.T) {
+func TestSelectPageByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByCond(&model.Teacher{Sex: 1}, "", 2, 3, teachers))
+	fmt.Println(bm.SelectPageByCond(&model.Teacher{Sex: 1}, gormstarter.PageQuery{
+		PageNumber: 2,
+		PageSize:   3,
+	}, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
 }
 
-func TestPageConditionMap(t *testing.T) {
+func TestSelectPageByMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByMap(map[string]any{"sex": 0}, "", 2, 2, teachers))
+	fmt.Println(bm.SelectPageByMap(map[string]any{"sex": 0}, gormstarter.PageQuery{
+		PageNumber: 2,
+		PageSize:   2,
+	}, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
 }
 
-func TestPageConditionGorm(t *testing.T) {
+func TestSelectPageByGorm(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
 	fmt.Println(bm.SelectPageByGorm(func(db *gorm.DB) {
@@ -214,14 +294,14 @@ func TestPageConditionGorm(t *testing.T) {
 	}
 }
 
-func TestUpdateByCondWithZeroField(t *testing.T) {
+func TestUpdateByCondWithZeroFields(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
 	condition := model.Teacher{Name: "2", Age: 0}
-	fmt.Println(bm.UpdateByCondWithZeroField(&updated, &condition, []string{"ClassNo"}))
+	fmt.Println(bm.UpdateByCondWithZeroFields(&updated, &condition, "ClassNo"))
 }
 
-func TestUpdateByCondMap(t *testing.T) {
+func TestUpdateByMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	fmt.Println(bm.UpdateByMap(map[string]any{"age": 0}, map[string]any{"age": 12}))
 }
@@ -236,14 +316,46 @@ func TestCount(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	var mp model.TeacherMapper
-	tx := gormstarter.RawGormDB().Begin()
+	db := gormstarter.RawMysqlGormDB()
+	if db == nil {
+		t.Fatal(gormstarter.ErrGormStarterNotStarted)
+	}
+	tx := db.Begin()
+	if tx.Error != nil {
+		t.Fatal(tx.Error)
+	}
+	defer tx.Rollback()
+
 	mpTx := mp.WithTxMapper(tx)
 	teacher := model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 12}
-	fmt.Println(mp.Insert(&teacher))
-	fmt.Println(mp.ById(teacher.ID))
-	teacher = model.Teacher{Name: "mapper", Age: 12, Sex: 1, ClassNo: 13}
-	fmt.Println(mpTx.Insert(&teacher))
-	fmt.Println(mpTx.Insert(&teacher))
-	fmt.Println(mpTx.ById(teacher.ID))
-	tx.Commit()
+	if _, err := mpTx.Insert(&teacher); err != nil {
+		t.Fatal(err)
+	}
+	var result model.Teacher
+	rows, err := mpTx.SelectByID(teacher.ID, &result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Fatalf("expected transaction to select 1 row, got %d", rows)
+	}
+	result = model.Teacher{}
+	rows, err = mp.SelectByID(teacher.ID, &result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 {
+		t.Fatalf("uncommitted data is visible outside transaction")
+	}
+	if err := tx.Commit().Error; err != nil {
+		t.Fatal(err)
+	}
+	result = model.Teacher{}
+	rows, err = mp.SelectByID(teacher.ID, &result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 || result.ID != teacher.ID {
+		t.Fatalf("committed data was not found")
+	}
 }

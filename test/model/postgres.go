@@ -12,7 +12,7 @@ type Employee struct {
 	UpdatedAt gormstarter.Timestamp `gorm:"<-:false"`
 	Name      string
 	Sex       string
-	LeaderId  pq.Int32Array `gorm:"type:integer[]"`
+	LeaderID  pq.Int32Array `gorm:"column:leader_id;type:integer[]"`
 }
 
 func (e Employee) DBType() gormstarter.DBType {
@@ -26,3 +26,5 @@ func (e Employee) TableName() string {
 type EmployeeMapper struct {
 	gormstarter.BaseMapper[Employee]
 }
+
+var _ gormstarter.Mapper[Employee] = EmployeeMapper{}
