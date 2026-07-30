@@ -18,21 +18,35 @@ func openMysqlDB(config *MySQLConfig, gormConfig *gorm.Config) (*gorm.DB, error)
 	if err != nil {
 		return nil, err
 	}
-	driverConfig := drivermysql.Config{
-		User:      config.Username,
-		Passwd:    config.Password,
-		Net:       "tcp",
-		Addr:      net.JoinHostPort(config.Host, strconv.Itoa(int(config.Port))),
-		DBName:    config.Database,
-		ParseTime: true,
-		Params:    map[string]string{"charset": config.Charset},
-	}
-	for key, values := range params {
-		if len(values) > 0 && !strings.EqualFold(key, "parseTime") && !strings.EqualFold(key, "charset") {
-			driverConfig.Params[key] = values[len(values)-1]
+
+	// parseTime 和 charset 由 Starter 统一管理，不允许额外连接参数覆盖。
+	for key := range params {
+		if strings.EqualFold(key, "parseTime") || strings.EqualFold(key, "charset") {
+			delete(params, key)
 		}
 	}
-	return gorm.Open(gormmysql.Open(driverConfig.FormatDSN()), gormConfig)
+
+	// 使用驱动默认配置，保留 mysql_native_password 等默认兼容行为。
+	driverConfig := drivermysql.NewConfig()
+	driverConfig.User = config.Username
+	driverConfig.Passwd = config.Password
+	driverConfig.Net = "tcp"
+	driverConfig.Addr = net.JoinHostPort(config.Host, strconv.Itoa(int(config.Port)))
+	driverConfig.DBName = config.Database
+	driverConfig.ParseTime = true
+	driverConfig.Params = map[string]string{"charset": config.Charset}
+
+	dsn := driverConfig.FormatDSN()
+	if encodedParams := params.Encode(); encodedParams != "" {
+		dsn += "&" + encodedParams
+	}
+
+	// 由驱动解析完整 DSN，确保驱动级连接参数写入对应配置字段。
+	driverConfig, err = drivermysql.ParseDSN(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return gorm.Open(gormmysql.New(gormmysql.Config{DSNConfig: driverConfig}), gormConfig)
 }
 
 func openPostgresDB(config *PostgresConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
