@@ -208,6 +208,21 @@ func (b BaseMapper[T]) CountByGorm(rawDB func(*gorm.DB)) (int64, error) {
 	return count, err
 }
 
+// applyTimeRanges 将 TimeRanges 批量应用到 gorm.DB 的 WHERE 条件中
+// 使用左闭右开区间 [StartTime, EndTime)，EndTime 为 nil 时无上界
+func applyTimeRanges(db *gorm.DB, ranges []TimeRange) *gorm.DB {
+	for _, tr := range ranges {
+		if tr.StartTime != nil && tr.EndTime != nil {
+			db = db.Where("("+tr.Field+" >= ? AND "+tr.Field+" < ?)", *tr.StartTime, *tr.EndTime)
+		} else if tr.StartTime != nil {
+			db = db.Where(tr.Field+" >= ?", *tr.StartTime)
+		} else if tr.EndTime != nil {
+			db = db.Where(tr.Field+" < ?", *tr.EndTime)
+		}
+	}
+	return db
+}
+
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
 func (b BaseMapper[T]) SelectPageByCond(condition *T, query PageQuery, result *[]*T) (total int64, err error) {
@@ -216,6 +231,7 @@ func (b BaseMapper[T]) SelectPageByCond(condition *T, query PageQuery, result *[
 	}
 	countDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -225,6 +241,7 @@ func (b BaseMapper[T]) SelectPageByCond(condition *T, query PageQuery, result *[
 	}
 	selectDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
 		return 0, err
@@ -243,6 +260,7 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, query PageQuery
 	}
 	countDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(condition).Count(&total))
 	if err != nil {
 		return 0, err
@@ -252,6 +270,7 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, query PageQuery
 	}
 	selectDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
 		return 0, err
@@ -266,6 +285,7 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSQL string, query PageQuery, re
 	}
 	countDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(rawWhereSQL, args...).Count(&total))
 	if err != nil {
 		return 0, err
@@ -275,6 +295,7 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSQL string, query PageQuery, re
 	}
 	selectDB, err := b.tableDB()
 	if err != nil { return 0, err }
+	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(rawWhereSQL, args...).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
 		return 0, err

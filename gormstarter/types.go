@@ -34,11 +34,20 @@ type BaseMapper[M Model] struct {
 	tx    *gorm.DB
 }
 
+// TimeRange 定义基于某个时间字段的起止范围过滤条件，使用左闭右开区间 [StartTime, EndTime)。
+// StartTime / EndTime 为 nil 时表示该方向不限。
+type TimeRange struct {
+	Field     string     // 数据库时间字段名（列名），如 "created_at"
+	StartTime *time.Time // 起始时间（含），nil 表示不限制下界
+	EndTime   *time.Time // 结束时间（不含），nil 表示不限制上界
+}
+
 type PageQuery struct {
 	PageNumber     int
 	PageSize       int
 	OrderBySQL     string
 	SpecifyColumns []string
+	TimeRanges     []TimeRange // 基于时间的过滤条件，支持多个时间字段
 }
 
 func (t *Timestamp) Scan(value interface{}) error {
