@@ -102,7 +102,7 @@ func (b BaseMapper[T]) ExistsByID(id any) (bool, error) {
 
 // SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
 // specifyColumns 指定只需要查询的数据库字段
-func (b BaseMapper[T]) SelectOneByCond(condition, result *T, specifyColumns ...string) (int64, error) {
+func (b BaseMapper[T]) SelectOneByCond(condition T, result *T, specifyColumns ...string) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(specifyColumns).Where(condition).Limit(1).Scan(result))
@@ -136,7 +136,7 @@ func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, 
 
 // SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
 // specifyColumns 指定只需要查询的数据库字段
-func (b BaseMapper[T]) SelectByCond(condition *T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error) {
+func (b BaseMapper[T]) SelectByCond(condition T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(specifyColumns).Where(condition).Order(orderBySQL).Scan(result))
@@ -169,7 +169,7 @@ func (b BaseMapper[T]) SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, 
 }
 
 // CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
-func (b BaseMapper[T]) CountByCond(condition *T) (int64, error) {
+func (b BaseMapper[T]) CountByCond(condition T) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
@@ -225,7 +225,7 @@ func applyTimeRanges(db *gorm.DB, ranges []TimeRange) *gorm.DB {
 
 // SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 // specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
-func (b BaseMapper[T]) SelectPageByCond(condition *T, query PageQuery, result *[]*T) (total int64, err error) {
+func (b BaseMapper[T]) SelectPageByCond(condition T, query PageQuery, result *[]*T) (total int64, err error) {
 	if query.PageNumber <= 0 || query.PageSize <= 0 {
 		return 0, ErrInvalidPage
 	}
@@ -428,14 +428,14 @@ func (b BaseMapper[T]) UpdateByIDWithMap(updated map[string]any, id any) (int64,
 
 // UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
 // updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
-func (b BaseMapper[T]) UpdateByCond(updated, condition *T, updateColumns ...string) (int64, error) {
+func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(updateColumns).Where(condition).Updates(updated))
 }
 
 // UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
-func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated, condition *T, allowZeroFieldColumns ...string) (int64, error) {
+func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := reflect.NonZeroFieldName(updated)
 	if err != nil {
 		return 0, err
@@ -484,7 +484,7 @@ func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
 }
 
 // DeleteByCond 通过条件删除 零值字段将被自动忽略
-func (b BaseMapper[T]) DeleteByCond(condition *T) (int64, error) {
+func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Where(condition).Delete(b.model))
