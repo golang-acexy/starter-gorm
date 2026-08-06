@@ -401,6 +401,9 @@ currentDB := mapper.CurrentGormDB()
 - `ErrNoFieldToSave`: an insert contains no writable fields.
 - `ErrNoFieldToUpdate`: an update contains no fields.
 - `ErrEmptyCondition`: a protected update or delete has an empty condition.
+- `ErrNilEntity`: an insert or update entity is nil, or a batch contains a nil entity.
+- `ErrEmptyIDs`: a batch ID delete contains no IDs.
+- `ErrEmptyWhereSQL`: a protected update or delete has an empty raw Where expression.
 
 ## Design Notes
 
@@ -410,5 +413,6 @@ currentDB := mapper.CurrentGormDB()
 - The map passed to `InitFunc` and returned by `Start` is a copy; modifying it does not replace the starter registry.
 - `BaseMapper` is a value type. Transaction helpers return a new mapper rather than modifying the original mapper.
 - Condition structs ignore zero values according to GORM behavior. Use map-based or explicit-column APIs when zero is meaningful.
+- Update and delete methods reject empty conditions before reaching GORM; GORM's missing-Where protection remains the final safeguard.
 - `Timestamp` supports SQL scanning, driver values, and JSON timestamp conversion through the shared toolkit.
 - The standard GORM starter does not allow parent-managed restart after successful shutdown.

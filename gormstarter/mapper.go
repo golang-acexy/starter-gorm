@@ -3,6 +3,8 @@ package gormstarter
 import (
 	"database/sql"
 	"fmt"
+	stdreflect "reflect"
+	"strings"
 
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
@@ -41,6 +43,34 @@ func checkResult(rs *gorm.DB) (int64, error) {
 		return 0, rs.Error
 	}
 	return rs.RowsAffected, nil
+}
+
+// validateStructCondition 防止结构体零值条件退化为全表更新或删除。
+func validateStructCondition[T any](condition T) error {
+	if stdreflect.ValueOf(condition).IsZero() {
+		return ErrEmptyCondition
+	}
+	return nil
+}
+
+// effectiveUpdateFields 收集实际可更新字段，主键 ID 不单独视为更新内容。
+func effectiveUpdateFields[T any](updated *T, explicitColumns ...string) ([]string, error) {
+	if updated == nil {
+		return nil, ErrNilEntity
+	}
+	fields, err := reflect.NonZeroFieldName(updated)
+	if err != nil {
+		return nil, err
+	}
+	fields = append(fields, explicitColumns...)
+	fields = coll.SliceDistinct(fields)
+	fields = coll.SliceFilter(fields, func(field string) bool {
+		return strings.TrimSpace(field) != "" && !strings.EqualFold(field, "id")
+	})
+	if len(fields) == 0 {
+		return nil, ErrNoFieldToUpdate
+	}
+	return fields, nil
 }
 
 // TableGormDB 获取已限定当前 Mapper 表名的原生 gorm.DB。
@@ -329,6 +359,9 @@ func (b BaseMapper[T]) SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB fun
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
 func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error) {
+	if entity == nil {
+		return 0, ErrNilEntity
+	}
 	db, err := b.rawDB()
 	if err != nil { return 0, err }
 	if len(excludeColumns) > 0 {
@@ -339,6 +372,9 @@ func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error
 
 // InsertWithoutZeroFields 保存数据 零值字段将不会参与保存
 func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
+	if entity == nil {
+		return 0, ErrNilEntity
+	}
 	nonZeroFields, err := reflect.NonZeroFieldName(entity)
 	if err != nil {
 		return 0, err
@@ -362,6 +398,14 @@ func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
 //
 //	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
 func (b BaseMapper[T]) InsertBatch(entities []*T, excludeColumns ...string) (int64, error) {
+	if len(entities) == 0 {
+		return 0, ErrNoFieldToSave
+	}
+	for _, entity := range entities {
+		if entity == nil {
+			return 0, ErrNilEntity
+		}
+	}
 	db, err := b.rawDB()
 	if err != nil { return 0, err }
 	if len(excludeColumns) > 0 {
@@ -384,6 +428,9 @@ func (b BaseMapper[T]) InsertWithMap(entity map[string]any) (int64, error) {
 // exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
 // 仅根据主键冲突默认支持update 更多操作需要参阅 https://gorm.io/zh_CN/docs/create.html#upsert
 func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
+	if entity == nil {
+		return 0, ErrNilEntity
+	}
 	db, err := b.rawDB()
 	if err != nil { return 0, err }
 	if len(excludeColumns) > 0 {
@@ -395,6 +442,9 @@ func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...s
 // UpdateByID 通过实体中的主键 ID 更新含零值字段
 // updateColumns 手动指定需要更新的列
 func (b BaseMapper[T]) UpdateByID(updated *T, updateColumns ...string) (int64, error) {
+	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil {
+		return 0, err
+	}
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(updateColumns).Updates(updated))
@@ -403,14 +453,8 @@ func (b BaseMapper[T]) UpdateByID(updated *T, updateColumns ...string) (int64, e
 // UpdateByIDWithoutZeroFields 通过ID更新非零值字段
 // allowZeroFieldColumns 额外指定需要更新零值字段
 func (b BaseMapper[T]) UpdateByIDWithoutZeroFields(updated *T, allowZeroFieldColumns ...string) (int64, error) {
-	nonZeroFields, err := reflect.NonZeroFieldName(updated)
-	if err != nil {
-		return 0, err
-	}
-	if len(allowZeroFieldColumns) > 0 {
-		nonZeroFields = append(nonZeroFields, allowZeroFieldColumns...)
-	}
-	nonZeroFields = coll.SliceDistinct(nonZeroFields)
+	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
+	if err != nil { return 0, err }
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(nonZeroFields).Updates(updated))
@@ -429,6 +473,8 @@ func (b BaseMapper[T]) UpdateByIDWithMap(updated map[string]any, id any) (int64,
 // UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
 // updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
 func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error) {
+	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil { return 0, err }
+	if err := validateStructCondition(condition); err != nil { return 0, err }
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(updateColumns).Where(condition).Updates(updated))
@@ -436,14 +482,9 @@ func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...st
 
 // UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
 func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error) {
-	nonZeroFields, err := reflect.NonZeroFieldName(updated)
-	if err != nil {
-		return 0, err
-	}
-	if len(allowZeroFieldColumns) > 0 {
-		nonZeroFields = append(nonZeroFields, allowZeroFieldColumns...)
-	}
-	nonZeroFields = coll.SliceDistinct(nonZeroFields)
+	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
+	if err != nil { return 0, err }
+	if err = validateStructCondition(condition); err != nil { return 0, err }
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Select(nonZeroFields).Where(condition).Updates(updated))
@@ -464,6 +505,8 @@ func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, er
 
 // UpdateByWhere 通过原始 Where SQL 条件更新非零实体字段
 func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSQL string, args ...any) (int64, error) {
+	if _, err := effectiveUpdateFields(updated); err != nil { return 0, err }
+	if strings.TrimSpace(rawWhereSQL) == "" { return 0, ErrEmptyWhereSQL }
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Where(rawWhereSQL, args...).Updates(updated))
@@ -478,6 +521,9 @@ func (b BaseMapper[T]) DeleteByID(id any) (int64, error) {
 
 // DeleteByIDs 通过多个 ID 删除数据
 func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
+	if len(ids) == 0 {
+		return 0, ErrEmptyIDs
+	}
 	db, err := b.rawDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Delete(b.model, ids))
@@ -485,6 +531,7 @@ func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
 
 // DeleteByCond 通过条件删除 零值字段将被自动忽略
 func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
+	if err := validateStructCondition(condition); err != nil { return 0, err }
 	db, err := b.tableDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Where(condition).Delete(b.model))
@@ -492,6 +539,7 @@ func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
 
 // DeleteByWhere 通过原始 Where SQL 删除相关数据
 func (b BaseMapper[T]) DeleteByWhere(rawWhereSQL string, args ...any) (int64, error) {
+	if strings.TrimSpace(rawWhereSQL) == "" { return 0, ErrEmptyWhereSQL }
 	db, err := b.rawDB()
 	if err != nil { return 0, err }
 	return checkResult(db.Where(rawWhereSQL, args...).Delete(b.model))
