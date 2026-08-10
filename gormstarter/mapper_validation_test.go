@@ -29,9 +29,18 @@ func TestWriteValidation(t *testing.T) {
 		{name: "empty update", run: func() error { _, err := mapper.UpdateByID(&validationModel{ID: 1}); return err }, want: ErrNoFieldToUpdate},
 		{name: "empty non-zero update", run: func() error { _, err := mapper.UpdateByIDWithoutZeroFields(&validationModel{ID: 1}); return err }, want: ErrNoFieldToUpdate},
 		{name: "nil condition update", run: func() error { _, err := mapper.UpdateByCond(nil, validationModel{ID: 1}); return err }, want: ErrNilEntity},
-		{name: "empty update condition", run: func() error { _, err := mapper.UpdateByCond(&validationModel{Name: "updated"}, validationModel{}); return err }, want: ErrEmptyCondition},
-		{name: "empty zero-field update", run: func() error { _, err := mapper.UpdateByCondWithZeroFields(&validationModel{}, validationModel{ID: 1}); return err }, want: ErrNoFieldToUpdate},
-		{name: "empty zero-field condition", run: func() error { _, err := mapper.UpdateByCondWithZeroFields(&validationModel{}, validationModel{}, "name"); return err }, want: ErrEmptyCondition},
+		{name: "empty update condition", run: func() error {
+			_, err := mapper.UpdateByCond(&validationModel{Name: "updated"}, validationModel{})
+			return err
+		}, want: ErrEmptyCondition},
+		{name: "empty zero-field update", run: func() error {
+			_, err := mapper.UpdateByCondWithZeroFields(&validationModel{}, validationModel{ID: 1})
+			return err
+		}, want: ErrNoFieldToUpdate},
+		{name: "empty zero-field condition", run: func() error {
+			_, err := mapper.UpdateByCondWithZeroFields(&validationModel{}, validationModel{}, "name")
+			return err
+		}, want: ErrEmptyCondition},
 		{name: "nil update where", run: func() error { _, err := mapper.UpdateByWhere(nil, "id = ?", 1); return err }, want: ErrNilEntity},
 		{name: "empty update where", run: func() error { _, err := mapper.UpdateByWhere(&validationModel{Name: "updated"}, " "); return err }, want: ErrEmptyWhereSQL},
 		{name: "empty delete IDs", run: func() error { _, err := mapper.DeleteByIDs(nil); return err }, want: ErrEmptyIDs},

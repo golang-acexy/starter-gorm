@@ -106,14 +106,18 @@ func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T]
 // SelectByID 通过主键查询数据
 func (b BaseMapper[T]) SelectByID(id any, result *T) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where("id = ?", id).Scan(result))
 }
 
 // SelectByIDs 通过主键查询数据
 func (b BaseMapper[T]) SelectByIDs(ids []any, result *[]*T) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where("id in ?", ids).Scan(result))
 }
 
@@ -134,7 +138,9 @@ func (b BaseMapper[T]) ExistsByID(id any) (bool, error) {
 // specifyColumns 指定只需要查询的数据库字段
 func (b BaseMapper[T]) SelectOneByCond(condition T, result *T, specifyColumns ...string) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(specifyColumns).Where(condition).Limit(1).Scan(result))
 }
 
@@ -145,21 +151,27 @@ func (b BaseMapper[T]) SelectOneByMap(condition map[string]any, result *T, speci
 		return 0, ErrEmptyCondition
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(specifyColumns).Where(condition).Limit(1).Scan(result))
 }
 
 // SelectOneByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
 func (b BaseMapper[T]) SelectOneByWhere(rawWhereSQL string, result *T, args ...any) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(rawWhereSQL, args...).Scan(result))
 }
 
 // SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
 func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	rawDB(db)
 	return checkResult(db.Scan(result))
 }
@@ -168,7 +180,9 @@ func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, 
 // specifyColumns 指定只需要查询的数据库字段
 func (b BaseMapper[T]) SelectByCond(condition T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(specifyColumns).Where(condition).Order(orderBySQL).Scan(result))
 }
 
@@ -179,21 +193,27 @@ func (b BaseMapper[T]) SelectByMap(condition map[string]any, orderBySQL string, 
 		return 0, ErrEmptyCondition
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(specifyColumns).Where(condition).Order(orderBySQL).Scan(result))
 }
 
 // SelectByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
 func (b BaseMapper[T]) SelectByWhere(rawWhereSQL, orderBySQL string, result *[]*T, args ...any) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(rawWhereSQL, args...).Order(orderBySQL).Scan(result))
 }
 
 // SelectByGorm 通过原始Gorm查询数据
 func (b BaseMapper[T]) SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, error) {
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	rawDB(db)
 	return checkResult(db.Scan(result))
 }
@@ -202,7 +222,9 @@ func (b BaseMapper[T]) SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, 
 func (b BaseMapper[T]) CountByCond(condition T) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	_, err = checkResult(db.Where(condition).Count(&count))
 	return count, err
 }
@@ -214,7 +236,9 @@ func (b BaseMapper[T]) CountByMap(condition map[string]any) (int64, error) {
 	}
 	var count int64
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	_, err = checkResult(db.Where(condition).Count(&count))
 	return count, err
 }
@@ -223,7 +247,9 @@ func (b BaseMapper[T]) CountByMap(condition map[string]any) (int64, error) {
 func (b BaseMapper[T]) CountByWhere(rawWhereSQL string, args ...any) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	_, err = checkResult(db.Where(rawWhereSQL, args...).Count(&count))
 	return count, err
 }
@@ -232,7 +258,9 @@ func (b BaseMapper[T]) CountByWhere(rawWhereSQL string, args ...any) (int64, err
 func (b BaseMapper[T]) CountByGorm(rawDB func(*gorm.DB)) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	rawDB(db)
 	_, err = checkResult(db.Count(&count))
 	return count, err
@@ -260,7 +288,9 @@ func (b BaseMapper[T]) SelectPageByCond(condition T, query PageQuery, result *[]
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(condition).Count(&total))
 	if err != nil {
@@ -270,7 +300,9 @@ func (b BaseMapper[T]) SelectPageByCond(condition T, query PageQuery, result *[]
 		return 0, nil
 	}
 	selectDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
@@ -289,7 +321,9 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, query PageQuery
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(condition).Count(&total))
 	if err != nil {
@@ -299,7 +333,9 @@ func (b BaseMapper[T]) SelectPageByMap(condition map[string]any, query PageQuery
 		return 0, nil
 	}
 	selectDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
@@ -314,7 +350,9 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSQL string, query PageQuery, re
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	countDB = applyTimeRanges(countDB, query.TimeRanges)
 	_, err = checkResult(countDB.Where(rawWhereSQL, args...).Count(&total))
 	if err != nil {
@@ -324,7 +362,9 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSQL string, query PageQuery, re
 		return 0, nil
 	}
 	selectDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
 	_, err = checkResult(selectDB.Select(query.SpecifyColumns).Where(rawWhereSQL, args...).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
 	if err != nil {
@@ -336,7 +376,9 @@ func (b BaseMapper[T]) SelectPageByWhere(rawWhereSQL string, query PageQuery, re
 // SelectPageByGorm 通过原始Gorm分页查询
 func (b BaseMapper[T]) SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB func(*gorm.DB), result *[]*T) (total int64, err error) {
 	countDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	countRawDB(countDB)
 	_, err = checkResult(countDB.Count(&total))
 	if err != nil {
@@ -346,7 +388,9 @@ func (b BaseMapper[T]) SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB fun
 		return 0, nil
 	}
 	selectDB, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	pageRawDB(selectDB)
 	_, err = checkResult(selectDB.Scan(result))
 	if err != nil {
@@ -363,7 +407,9 @@ func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error
 		return 0, ErrNilEntity
 	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)
 	}
@@ -383,7 +429,9 @@ func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
 		return 0, ErrNoFieldToSave
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	if len(nonZeroFields) == 1 {
 		return checkResult(db.Select(nonZeroFields[0]).Create(entity))
 	} else {
@@ -407,7 +455,9 @@ func (b BaseMapper[T]) InsertBatch(entities []*T, excludeColumns ...string) (int
 		}
 	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)
 	}
@@ -420,7 +470,9 @@ func (b BaseMapper[T]) InsertWithMap(entity map[string]any) (int64, error) {
 		return 0, ErrNoFieldToSave
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Create(entity))
 }
 
@@ -432,7 +484,9 @@ func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...s
 		return 0, ErrNilEntity
 	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	if len(excludeColumns) > 0 {
 		db = db.Omit(excludeColumns...)
 	}
@@ -446,7 +500,9 @@ func (b BaseMapper[T]) UpdateByID(updated *T, updateColumns ...string) (int64, e
 		return 0, err
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(updateColumns).Updates(updated))
 }
 
@@ -454,9 +510,13 @@ func (b BaseMapper[T]) UpdateByID(updated *T, updateColumns ...string) (int64, e
 // allowZeroFieldColumns 额外指定需要更新零值字段
 func (b BaseMapper[T]) UpdateByIDWithoutZeroFields(updated *T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(nonZeroFields).Updates(updated))
 }
 
@@ -466,27 +526,41 @@ func (b BaseMapper[T]) UpdateByIDWithMap(updated map[string]any, id any) (int64,
 		return 0, ErrNoFieldToUpdate
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where("id = ?", id).Updates(updated))
 }
 
 // UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
 // updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
 func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error) {
-	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil { return 0, err }
-	if err := validateStructCondition(condition); err != nil { return 0, err }
+	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil {
+		return 0, err
+	}
+	if err := validateStructCondition(condition); err != nil {
+		return 0, err
+	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(updateColumns).Where(condition).Updates(updated))
 }
 
 // UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
 func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
-	if err != nil { return 0, err }
-	if err = validateStructCondition(condition); err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
+	if err = validateStructCondition(condition); err != nil {
+		return 0, err
+	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(nonZeroFields).Where(condition).Updates(updated))
 }
 
@@ -499,23 +573,33 @@ func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, er
 		return 0, ErrEmptyCondition
 	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(condition).Updates(updated))
 }
 
 // UpdateByWhere 通过原始 Where SQL 条件更新非零实体字段
 func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSQL string, args ...any) (int64, error) {
-	if _, err := effectiveUpdateFields(updated); err != nil { return 0, err }
-	if strings.TrimSpace(rawWhereSQL) == "" { return 0, ErrEmptyWhereSQL }
+	if _, err := effectiveUpdateFields(updated); err != nil {
+		return 0, err
+	}
+	if strings.TrimSpace(rawWhereSQL) == "" {
+		return 0, ErrEmptyWhereSQL
+	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(rawWhereSQL, args...).Updates(updated))
 }
 
 // DeleteByID 通过 ID 删除单条数据
 func (b BaseMapper[T]) DeleteByID(id any) (int64, error) {
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Delete(b.model, id))
 }
 
@@ -525,23 +609,33 @@ func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
 		return 0, ErrEmptyIDs
 	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Delete(b.model, ids))
 }
 
 // DeleteByCond 通过条件删除 零值字段将被自动忽略
 func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
-	if err := validateStructCondition(condition); err != nil { return 0, err }
+	if err := validateStructCondition(condition); err != nil {
+		return 0, err
+	}
 	db, err := b.tableDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(condition).Delete(b.model))
 }
 
 // DeleteByWhere 通过原始 Where SQL 删除相关数据
 func (b BaseMapper[T]) DeleteByWhere(rawWhereSQL string, args ...any) (int64, error) {
-	if strings.TrimSpace(rawWhereSQL) == "" { return 0, ErrEmptyWhereSQL }
+	if strings.TrimSpace(rawWhereSQL) == "" {
+		return 0, ErrEmptyWhereSQL
+	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(rawWhereSQL, args...).Delete(b.model))
 }
 
@@ -551,6 +645,8 @@ func (b BaseMapper[T]) DeleteByMap(condition map[string]any) (int64, error) {
 		return 0, ErrEmptyCondition
 	}
 	db, err := b.rawDB()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Where(condition).Delete(b.model))
 }

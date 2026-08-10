@@ -20,11 +20,11 @@ func init() {
 				return gormstarter.GormConfig{
 					Postgres: &gormstarter.PostgresConfig{
 						DatabaseConfig: gormstarter.DatabaseConfig{
-					Username: "postgres",
-					Password: "tech-acexy",
-					Database: "postgres",
-					Host:     "127.0.0.1",
-					Port:     5432,
+							Username: "postgres",
+							Password: "tech-acexy",
+							Database: "postgres",
+							Host:     "127.0.0.1",
+							Port:     5432,
 						},
 					},
 					InitFunc: func(instance map[gormstarter.DBType]*gorm.DB) {
