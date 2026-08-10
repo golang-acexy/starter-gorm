@@ -223,7 +223,7 @@ Examples:
 var teachers []*Teacher
 
 _, err := mapper.SelectByCond(
-	&Teacher{Sex: 1},
+	Teacher{Sex: 1},
 	"id desc",
 	&teachers,
 )
@@ -252,10 +252,10 @@ Empty maps are rejected for condition-based update and delete operations to prev
 _, err := mapper.Insert(&teacher, "created_at")
 ```
 
-Use `InsertWithoutZeroField` to include only non-zero fields, or `InsertWithMap` to control values explicitly:
+Use `InsertWithoutZeroFields` to include only non-zero fields, or `InsertWithMap` to control values explicitly:
 
 ```go
-_, err := mapper.InsertWithoutZeroField(&teacher)
+_, err := mapper.InsertWithoutZeroFields(&teacher)
 
 _, err = mapper.InsertWithMap(map[string]any{
 	"name": "Alice",
@@ -266,11 +266,11 @@ _, err = mapper.InsertWithMap(map[string]any{
 Updates support the same explicit zero-value control:
 
 ```go
-_, err := mapper.UpdateByIDWithoutZeroField(&teacher, "sex")
+_, err := mapper.UpdateByIDWithoutZeroFields(&teacher, "sex")
 
-_, err = mapper.UpdateByCondWithZeroField(
+_, err = mapper.UpdateByCondWithZeroFields(
 	&Teacher{Sex: 0},
-	&Teacher{Name: "Alice"},
+	Teacher{Name: "Alice"},
 	"sex",
 )
 ```
@@ -295,6 +295,30 @@ total, err := mapper.SelectPageByMap(
 ```
 
 `total` is the number of matching rows before pagination. Invalid pagination returns `ErrInvalidPage`.
+
+Typed conditions are input values, while query destinations remain pointers: use `T` for a condition, `*T` for one result, and `*[]*T` for multiple results.
+
+`PageQuery.TimeRanges` adds left-closed, right-open time filters to both the count and page queries:
+
+```go
+start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+end := start.Add(24 * time.Hour)
+
+total, err := mapper.SelectPageByCond(
+	Teacher{Sex: 1},
+	gormstarter.PageQuery{
+		PageNumber: 1,
+		PageSize:   20,
+		OrderBySQL: "id desc",
+		TimeRanges: []gormstarter.TimeRange{
+			{Field: "created_at", StartTime: &start, EndTime: &end},
+		},
+	},
+	&teachers,
+)
+```
+
+`StartTime` or `EndTime` may be nil for an open bound. `Field` is a database column identifier and must come from trusted application configuration rather than unchecked client input.
 
 ## Transactions
 
@@ -377,6 +401,9 @@ currentDB := mapper.CurrentGormDB()
 - `ErrNoFieldToSave`: an insert contains no writable fields.
 - `ErrNoFieldToUpdate`: an update contains no fields.
 - `ErrEmptyCondition`: a protected update or delete has an empty condition.
+- `ErrNilEntity`: an insert or update entity is nil, or a batch contains a nil entity.
+- `ErrEmptyIDs`: a batch ID delete contains no IDs.
+- `ErrEmptyWhereSQL`: a protected update or delete has an empty raw Where expression.
 
 ## Design Notes
 
@@ -386,5 +413,6 @@ currentDB := mapper.CurrentGormDB()
 - The map passed to `InitFunc` and returned by `Start` is a copy; modifying it does not replace the starter registry.
 - `BaseMapper` is a value type. Transaction helpers return a new mapper rather than modifying the original mapper.
 - Condition structs ignore zero values according to GORM behavior. Use map-based or explicit-column APIs when zero is meaningful.
+- Update and delete methods reject empty conditions before reaching GORM; GORM's missing-Where protection remains the final safeguard.
 - `Timestamp` supports SQL scanning, driver values, and JSON timestamp conversion through the shared toolkit.
 - The standard GORM starter does not allow parent-managed restart after successful shutdown.

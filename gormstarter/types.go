@@ -34,11 +34,20 @@ type BaseMapper[M Model] struct {
 	tx    *gorm.DB
 }
 
+// TimeRange 定义基于某个时间字段的起止范围过滤条件，使用左闭右开区间 [StartTime, EndTime)。
+// StartTime / EndTime 为 nil 时表示该方向不限。
+type TimeRange struct {
+	Field     string     // 数据库时间字段名（列名），如 "created_at"
+	StartTime *time.Time // 起始时间（含），nil 表示不限制下界
+	EndTime   *time.Time // 结束时间（不含），nil 表示不限制上界
+}
+
 type PageQuery struct {
 	PageNumber     int
 	PageSize       int
 	OrderBySQL     string
 	SpecifyColumns []string
+	TimeRanges     []TimeRange // 基于时间的过滤条件，支持多个时间字段
 }
 
 func (t *Timestamp) Scan(value interface{}) error {
@@ -97,11 +106,11 @@ type QueryMapper[T Model] interface {
 
 	// SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段
-	SelectOneByCond(condition, result *T, specifyColumns ...string) (int64, error)
+	SelectOneByCond(condition T, result *T, specifyColumns ...string) (int64, error)
 
 	// SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段
-	SelectByCond(condition *T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error)
+	SelectByCond(condition T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error)
 
 	// SelectOneByMap 通过指定字段与值查询数据 解决查询条件零值问题
 	// specifyColumns 指定只需要查询的数据库字段
@@ -124,7 +133,7 @@ type QueryMapper[T Model] interface {
 	SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, error)
 
 	// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
-	CountByCond(condition *T) (int64, error)
+	CountByCond(condition T) (int64, error)
 
 	// CountByMap 通过指定字段与值查询数据总数 解决零值条件问题
 	CountByMap(condition map[string]any) (int64, error)
@@ -137,7 +146,7 @@ type QueryMapper[T Model] interface {
 
 	// SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
-	SelectPageByCond(condition *T, query PageQuery, result *[]*T) (total int64, err error)
+	SelectPageByCond(condition T, query PageQuery, result *[]*T) (total int64, err error)
 
 	// SelectPageByMap 通过指定字段与值查询数据分页查询 解决零值条件问题
 	// specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
@@ -187,10 +196,10 @@ type UpdateMapper[T Model] interface {
 
 	// UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
 	// updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
-	UpdateByCond(updated, condition *T, updateColumns ...string) (int64, error)
+	UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error)
 
 	// UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
-	UpdateByCondWithZeroFields(updated, condition *T, allowZeroFieldColumns ...string) (int64, error)
+	UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error)
 
 	// UpdateByMap 通过Map类型条件更新
 	UpdateByMap(updated, condition map[string]any) (int64, error)
@@ -208,7 +217,7 @@ type DeleteMapper[T Model] interface {
 	DeleteByIDs(ids []any) (int64, error)
 
 	// DeleteByCond 通过条件删除 零值字段将被自动忽略
-	DeleteByCond(condition *T) (int64, error)
+	DeleteByCond(condition T) (int64, error)
 
 	// DeleteByMap 通过Map类型条件删除
 	DeleteByMap(condition map[string]any) (int64, error)

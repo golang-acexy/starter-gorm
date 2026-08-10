@@ -12,4 +12,7 @@ var (
 	ErrNoFieldToSave             = errors.New("no field to save")
 	ErrNoFieldToUpdate           = errors.New("no field to update")
 	ErrEmptyCondition            = errors.New("condition must not be empty")
+	ErrNilEntity                 = errors.New("entity must not be nil")
+	ErrEmptyIDs                  = errors.New("ids must not be empty")
+	ErrEmptyWhereSQL             = errors.New("where SQL must not be empty")
 )

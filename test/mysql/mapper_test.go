@@ -114,7 +114,7 @@ func TestUpdateZeroFieldsSelection(t *testing.T) {
 
 	updatedByCond := model.Teacher{Name: "zfcond", ClassNo: 0}
 	condition := model.Teacher{ID: teacher.ID}
-	if _, err := bm.UpdateByCondWithZeroFields(&updatedByCond, &condition, "class_no"); err != nil {
+	if _, err := bm.UpdateByCondWithZeroFields(&updatedByCond, condition, "class_no"); err != nil {
 		t.Fatal(err)
 	}
 	result = model.Teacher{}
@@ -150,7 +150,7 @@ func TestDeleteByWhere(t *testing.T) {
 
 func TestDeleteByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
-	fmt.Println(bm.DeleteByCond(&model.Teacher{
+	fmt.Println(bm.DeleteByCond(model.Teacher{
 		Name: "mapper",
 		Age:  12,
 		Sex:  1,
@@ -166,7 +166,7 @@ func TestUpdateByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
 	condition := model.Teacher{Name: "2", Age: 0}
-	fmt.Println(bm.UpdateByCond(&updated, &condition))
+	fmt.Println(bm.UpdateByCond(&updated, condition))
 }
 
 func TestSelectByID(t *testing.T) {
@@ -216,7 +216,7 @@ func TestSelectByCond(t *testing.T) {
 	var teachers []*model.Teacher
 	// 由于Age是零值，不会用于查询
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
-	bm.SelectByCond(&model.Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
+	bm.SelectByCond(model.Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
 	fmt.Println(json.ToStringFormat(teachers))
 }
 
@@ -260,7 +260,7 @@ func TestSelectByMap(t *testing.T) {
 func TestSelectPageByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByCond(&model.Teacher{Sex: 1}, gormstarter.PageQuery{
+	fmt.Println(bm.SelectPageByCond(model.Teacher{Sex: 1}, gormstarter.PageQuery{
 		PageNumber: 2,
 		PageSize:   3,
 	}, teachers))
@@ -298,7 +298,7 @@ func TestUpdateByCondWithZeroFields(t *testing.T) {
 	bm := model.TeacherMapper{}
 	updated := model.Teacher{Name: "1", Age: 0}
 	condition := model.Teacher{Name: "2", Age: 0}
-	fmt.Println(bm.UpdateByCondWithZeroFields(&updated, &condition, "ClassNo"))
+	fmt.Println(bm.UpdateByCondWithZeroFields(&updated, condition, "ClassNo"))
 }
 
 func TestUpdateByMap(t *testing.T) {
@@ -309,7 +309,7 @@ func TestUpdateByMap(t *testing.T) {
 func TestCount(t *testing.T) {
 	var bm model.TeacherMapper
 	fmt.Println(bm.CountByMap(map[string]any{"age": 0}))
-	fmt.Println(bm.CountByCond(&model.Teacher{
+	fmt.Println(bm.CountByCond(model.Teacher{
 		Age: 1,
 	}))
 }
