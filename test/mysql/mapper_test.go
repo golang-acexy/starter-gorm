@@ -80,11 +80,11 @@ func TestUpdateByID(t *testing.T) {
 
 	updated.ID = 47
 	// 由于sex是零值并不会被用于更新的指定
-	fmt.Println(bm.UpdateByID(&updated))
+	fmt.Println(bm.UpdateByID(&updated, updated.ID))
 	// 通过指定字段更新 可以指定零值
-	fmt.Println(bm.UpdateByID(&updated, "sex", "name", "age"))
+	fmt.Println(bm.UpdateByID(&updated, updated.ID, "sex", "name", "age"))
 
-	fmt.Println(bm.UpdateByIDWithoutZeroFields(&updated, "sex"))
+	fmt.Println(bm.UpdateByIDWithoutZeroFields(&updated, updated.ID, "sex"))
 }
 
 func TestUpdateByIDWithMap(t *testing.T) {
@@ -101,7 +101,7 @@ func TestUpdateZeroFieldsSelection(t *testing.T) {
 	defer bm.DeleteByID(teacher.ID)
 
 	updatedByID := model.Teacher{ID: teacher.ID, Name: "zfid", Age: 0, Sex: 0}
-	if _, err := bm.UpdateByIDWithoutZeroFields(&updatedByID, "sex"); err != nil {
+	if _, err := bm.UpdateByIDWithoutZeroFields(&updatedByID, updatedByID.ID, "sex"); err != nil {
 		t.Fatal(err)
 	}
 	var result model.Teacher
@@ -216,14 +216,14 @@ func TestSelectByCond(t *testing.T) {
 	var teachers []*model.Teacher
 	// 由于Age是零值，不会用于查询
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
-	bm.SelectByCond(model.Teacher{Sex: 1, Age: 0}, "id desc", &teachers)
+	bm.SelectByCond(gormstarter.CondQuery[model.Teacher]{Condition: model.Teacher{Sex: 1, Age: 0}, QueryOptions: gormstarter.QueryOptions{OrderBySQL: "id desc"}}, &teachers)
 	fmt.Println(json.ToStringFormat(teachers))
 }
 
 func TestSelectByWhere(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	bm.SelectByWhere("name =? and age > ?", "", teachers, "mapper", 5)
+	bm.SelectByWhere(gormstarter.WhereQuery{RawWhereSQL: "name =? and age > ?", Args: []any{"mapper", 5}}, teachers)
 	fmt.Println(teachers)
 }
 
@@ -250,19 +250,71 @@ func TestSelectOneByGorm(t *testing.T) {
 func TestSelectByMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	bm.SelectByMap(map[string]any{"sex": 0}, "", teachers)
+	bm.SelectByMap(gormstarter.MapQuery{Condition: map[string]any{"sex": 0}}, teachers)
 	fmt.Println(json.ToStringFormat(teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
 	}
 }
 
+func TestQueryWrapper(t *testing.T) {
+	columns := struct {
+		ID        gormstarter.Column[model.Teacher, uint64]
+		Name      gormstarter.Column[model.Teacher, string]
+		Age       gormstarter.Column[model.Teacher, uint]
+		CreatedAt gormstarter.Column[model.Teacher, gormstarter.Timestamp]
+	}{
+		ID:        gormstarter.NewColumn(func(teacher *model.Teacher) *uint64 { return &teacher.ID }),
+		Name:      gormstarter.NewColumn(func(teacher *model.Teacher) *string { return &teacher.Name }),
+		Age:       gormstarter.NewColumn(func(teacher *model.Teacher) *uint { return &teacher.Age }),
+		CreatedAt: gormstarter.NewColumn(func(teacher *model.Teacher) *gormstarter.Timestamp { return &teacher.CreatedAt }),
+	}
+
+	mapper := model.TeacherMapper{}
+	query := mapper.Wrapper().
+		Where(gormstarter.Or(columns.Age.Ge(0), columns.Name.Contains("mapper"))).
+		Select(columns.ID, columns.Name).
+		OrderByDesc(columns.CreatedAt).
+		Limit(2)
+
+	var teachers []*model.Teacher
+	if _, err := mapper.SelectByWrapper(query, &teachers); err != nil {
+		t.Fatal(err)
+	}
+	if len(teachers) > 2 {
+		t.Fatalf("Wrapper Limit 未生效: %d", len(teachers))
+	}
+	total, err := mapper.CountByWrapper(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total < int64(len(teachers)) {
+		t.Fatalf("Wrapper 计数不应应用 Limit: total=%d records=%d", total, len(teachers))
+	}
+
+	var pageRecords []*model.Teacher
+	pageQuery := mapper.PageWrapper(1, 1).
+		Where(gormstarter.Or(columns.Age.Ge(0), columns.Name.Contains("mapper"))).
+		Select(columns.ID, columns.Name).
+		OrderByDesc(columns.CreatedAt)
+	pageTotal, err := mapper.SelectPageByWrapper(pageQuery, &pageRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pageTotal != total || len(pageRecords) > 1 {
+		t.Fatalf("Wrapper 分页结果异常: total=%d records=%d", pageTotal, len(pageRecords))
+	}
+}
+
 func TestSelectPageByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByCond(model.Teacher{Sex: 1}, gormstarter.PageQuery{
-		PageNumber: 2,
-		PageSize:   3,
+	fmt.Println(bm.SelectPageByCond(gormstarter.PageQuery[model.Teacher]{
+		Condition: model.Teacher{Sex: 1},
+		PageOptions: gormstarter.PageOptions{
+			PageNumber: 2,
+			PageSize:   3,
+		},
 	}, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
@@ -272,9 +324,9 @@ func TestSelectPageByCond(t *testing.T) {
 func TestSelectPageByMap(t *testing.T) {
 	bm := model.TeacherMapper{}
 	teachers := new([]*model.Teacher)
-	fmt.Println(bm.SelectPageByMap(map[string]any{"sex": 0}, gormstarter.PageQuery{
-		PageNumber: 2,
-		PageSize:   2,
+	fmt.Println(bm.SelectPageByMap(gormstarter.MapPageQuery{
+		Condition:   map[string]any{"sex": 0},
+		PageOptions: gormstarter.PageOptions{PageNumber: 2, PageSize: 2},
 	}, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)

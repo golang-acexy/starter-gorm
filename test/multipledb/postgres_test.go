@@ -42,7 +42,7 @@ func TestPostgresSelect(t *testing.T) {
 	employee = model.Employee{
 		LeaderID: []int32{1, 2, 3},
 	}
-	if _, err := employeeMapper.SelectOneByCond(employee, &employee); err != nil {
+	if _, err := employeeMapper.SelectOneByCond(gormstarter.CondQuery[model.Employee]{Condition: employee}, &employee); err != nil {
 		t.Fatal(err)
 	}
 }

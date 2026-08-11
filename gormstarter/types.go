@@ -17,6 +17,11 @@ const (
 // Timestamp 时间戳处理 接收数据库的时间类型
 type Timestamp json.Timestamp
 
+// NewTimestamp 创建时间戳
+func NewTimestamp(time time.Time) Timestamp {
+	return Timestamp{Time: time}
+}
+
 type DBType string
 
 type Model interface {
@@ -42,12 +47,48 @@ type TimeRange struct {
 	EndTime   *time.Time // 结束时间（不含），nil 表示不限制上界
 }
 
-type PageQuery struct {
-	PageNumber     int
-	PageSize       int
-	OrderBySQL     string
-	SpecifyColumns []string
-	TimeRanges     []TimeRange // 基于时间的过滤条件，支持多个时间字段
+type QueryOptions struct {
+	OrderBySQL    string
+	SelectColumns []string
+	TimeRanges    []TimeRange // 基于时间的过滤条件，支持多个时间字段
+}
+
+type PageOptions struct {
+	PageNumber int
+	PageSize   int
+	QueryOptions
+}
+
+type PageQuery[T Model] struct {
+	Condition T
+	PageOptions
+}
+
+type MapPageQuery struct {
+	Condition map[string]any
+	PageOptions
+}
+
+type WherePageQuery struct {
+	RawWhereSQL string
+	Args        []any
+	PageOptions
+}
+
+type CondQuery[T Model] struct {
+	Condition T
+	QueryOptions
+}
+
+type MapQuery struct {
+	Condition map[string]any
+	QueryOptions
+}
+
+type WhereQuery struct {
+	RawWhereSQL string
+	Args        []any
+	QueryOptions
 }
 
 func (t *Timestamp) Scan(value interface{}) error {
@@ -104,33 +145,38 @@ type QueryMapper[T Model] interface {
 	// ExistsByID 判断指定主键的数据是否存在
 	ExistsByID(id any) (bool, error)
 
-	// SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
-	// specifyColumns 指定只需要查询的数据库字段
-	SelectOneByCond(condition T, result *T, specifyColumns ...string) (int64, error)
+	// SelectOneByCond 通过实体条件查询一条数据，条件中的零值字段将被自动忽略。
+	SelectOneByCond(query CondQuery[T], result *T) (int64, error)
 
 	// SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
 	// specifyColumns 指定只需要查询的数据库字段
-	SelectByCond(condition T, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error)
+	SelectByCond(query CondQuery[T], result *[]*T) (int64, error)
 
 	// SelectOneByMap 通过指定字段与值查询数据 解决查询条件零值问题
 	// specifyColumns 指定只需要查询的数据库字段
-	SelectOneByMap(condition map[string]any, result *T, specifyColumns ...string) (int64, error)
+	SelectOneByMap(query MapQuery, result *T) (int64, error)
 
 	// SelectByMap 通过指定字段与值查询数据 解决零值条件问题
 	// specifyColumns 指定只需要查询的数据库字段
-	SelectByMap(condition map[string]any, orderBySQL string, result *[]*T, specifyColumns ...string) (int64, error)
+	SelectByMap(query MapQuery, result *[]*T) (int64, error)
 
 	// SelectOneByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
-	SelectOneByWhere(rawWhereSQL string, result *T, args ...any) (int64, error)
+	SelectOneByWhere(query WhereQuery, result *T) (int64, error)
 
 	// SelectByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
-	SelectByWhere(rawWhereSQL, orderBySQL string, result *[]*T, args ...any) (int64, error)
+	SelectByWhere(query WhereQuery, result *[]*T) (int64, error)
 
 	// SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
 	SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, error)
 
 	// SelectByGorm 通过原始Gorm查询数据
 	SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, error)
+
+	// SelectOneByWrapper 使用类型安全的 Wrapper 查询一条数据。
+	SelectOneByWrapper(query *QueryWrapper[T], result *T) (int64, error)
+
+	// SelectByWrapper 使用类型安全的 Wrapper 查询数据。
+	SelectByWrapper(query *QueryWrapper[T], result *[]*T) (int64, error)
 
 	// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
 	CountByCond(condition T) (int64, error)
@@ -144,19 +190,23 @@ type QueryMapper[T Model] interface {
 	// CountByGorm 通过原始Gorm查询数据总数
 	CountByGorm(rawDB func(*gorm.DB)) (int64, error)
 
-	// SelectPageByCond 通过条件分页查询 零值字段将被自动忽略
-	// specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
-	SelectPageByCond(condition T, query PageQuery, result *[]*T) (total int64, err error)
+	// CountByWrapper 使用 Wrapper 条件统计数据总数，忽略投影、排序、Limit 和 Offset。
+	CountByWrapper(query *QueryWrapper[T]) (int64, error)
 
-	// SelectPageByMap 通过指定字段与值查询数据分页查询 解决零值条件问题
-	// specifyColumns 指定只需要查询的数据库字段 pageNumber 页码 1开始
-	SelectPageByMap(condition map[string]any, query PageQuery, result *[]*T) (total int64, err error)
+	// SelectPageByCond 通过实体条件分页查询，条件中的零值字段将被自动忽略。
+	SelectPageByCond(query PageQuery[T], result *[]*T) (total int64, err error)
+
+	// SelectPageByMap 通过 Map 条件分页查询，支持显式查询零值字段。
+	SelectPageByMap(query MapPageQuery, result *[]*T) (total int64, err error)
 
 	// SelectPageByWhere 通过原始 SQL 分页查询
-	SelectPageByWhere(rawWhereSQL string, query PageQuery, result *[]*T, args ...any) (total int64, err error)
+	SelectPageByWhere(query WherePageQuery, result *[]*T) (total int64, err error)
 
 	// SelectPageByGorm 通过原始Gorm分页查询
 	SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB func(*gorm.DB), result *[]*T) (total int64, err error)
+
+	// SelectPageByWrapper 使用 Wrapper 条件分页查询。
+	SelectPageByWrapper(query *PageWrapper[T], result *[]*T) (total int64, err error)
 }
 
 // InsertMapper 提供新增能力。
@@ -185,11 +235,11 @@ type InsertMapper[T Model] interface {
 type UpdateMapper[T Model] interface {
 	// UpdateByID 通过实体中的主键 ID 更新含零值字段
 	// updateColumns 手动指定需要更新的列
-	UpdateByID(updated *T, updateColumns ...string) (int64, error)
+	UpdateByID(updated *T, id any, updateColumns ...string) (int64, error)
 
 	// UpdateByIDWithoutZeroFields 通过ID更新非零值字段
 	// allowZeroFieldColumns 额外指定需要更新零值字段
-	UpdateByIDWithoutZeroFields(updated *T, allowZeroFieldColumns ...string) (int64, error)
+	UpdateByIDWithoutZeroFields(updated *T, id any, allowZeroFieldColumns ...string) (int64, error)
 
 	// UpdateByIDWithMap 通过 ID 更新 Map 中指定的列和值
 	UpdateByIDWithMap(updated map[string]any, id any) (int64, error)
@@ -206,6 +256,9 @@ type UpdateMapper[T Model] interface {
 
 	// UpdateByWhere 通过原始 Where SQL 条件更新非零实体字段
 	UpdateByWhere(updated *T, rawWhereSQL string, args ...any) (int64, error)
+
+	// UpdateByWrapper 使用 Wrapper 条件和 Set 赋值更新数据。
+	UpdateByWrapper(wrapper *UpdateWrapper[T]) (int64, error)
 }
 
 // DeleteMapper 提供删除能力。
