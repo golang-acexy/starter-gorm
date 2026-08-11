@@ -117,8 +117,8 @@ func (b BaseMapper[T]) Wrapper() *QueryWrapper[T] {
 }
 
 // PageWrapper 创建与当前 Mapper 模型类型绑定的分页查询 Wrapper。
-func (b BaseMapper[T]) PageWrapper(pageNumber, pageSize int) *PageWrapper[T] {
-	return newPageWrapper[T](pageNumber, pageSize)
+func (b BaseMapper[T]) PageWrapper(number, size int) *PageWrapper[T] {
+	return newPageWrapper[T](number, size)
 }
 
 // UpdateWrapper 创建与当前 Mapper 模型类型绑定的更新 Wrapper。
@@ -223,6 +223,10 @@ func (b BaseMapper[T]) SelectByCond(query CondQuery[T], result *[]*T) (int64, er
 		return 0, err
 	}
 	db = applyTimeRanges(db, query.TimeRanges)
+	db, err = applyQueryLimit(db, query.Limit)
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Scan(result))
 }
 
@@ -234,6 +238,10 @@ func (b BaseMapper[T]) SelectByMap(query MapQuery, result *[]*T) (int64, error) 
 		return 0, err
 	}
 	db = applyTimeRanges(db, query.TimeRanges)
+	db, err = applyQueryLimit(db, query.Limit)
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Scan(result))
 }
 
@@ -244,6 +252,10 @@ func (b BaseMapper[T]) SelectByWhere(query WhereQuery, result *[]*T) (int64, err
 		return 0, err
 	}
 	db = applyTimeRanges(db, query.TimeRanges)
+	db, err = applyQueryLimit(db, query.Limit)
+	if err != nil {
+		return 0, err
+	}
 	return checkResult(db.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Scan(result))
 }
 
@@ -283,36 +295,39 @@ func (b BaseMapper[T]) SelectByWrapper(query *QueryWrapper[T], result *[]*T) (in
 	return checkResult(db.Scan(result))
 }
 
-// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
-func (b BaseMapper[T]) CountByCond(condition T) (int64, error) {
+// CountByCond 通过实体条件统计数据，条件中的零值字段将被自动忽略。
+func (b BaseMapper[T]) CountByCond(query CondQuery[T]) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
 	if err != nil {
 		return 0, err
 	}
-	_, err = checkResult(db.Where(condition).Count(&count))
+	db = applyTimeRanges(db, query.TimeRanges)
+	_, err = checkResult(db.Where(query.Condition).Count(&count))
 	return count, err
 }
 
-// CountByMap 通过指定字段与值查询数据总数 解决零值条件问题
-func (b BaseMapper[T]) CountByMap(condition map[string]any) (int64, error) {
+// CountByMap 通过 Map 条件统计数据，支持显式零值条件。
+func (b BaseMapper[T]) CountByMap(query MapQuery) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
 	if err != nil {
 		return 0, err
 	}
-	_, err = checkResult(db.Where(condition).Count(&count))
+	db = applyTimeRanges(db, query.TimeRanges)
+	_, err = checkResult(db.Where(query.Condition).Count(&count))
 	return count, err
 }
 
-// CountByWhere 通过原始SQL查询数据总数
-func (b BaseMapper[T]) CountByWhere(rawWhereSQL string, args ...any) (int64, error) {
+// CountByWhere 通过原始 SQL 条件统计数据。
+func (b BaseMapper[T]) CountByWhere(query WhereQuery) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
 	if err != nil {
 		return 0, err
 	}
-	_, err = checkResult(db.Where(rawWhereSQL, args...).Count(&count))
+	db = applyTimeRanges(db, query.TimeRanges)
+	_, err = checkResult(db.Where(query.RawWhereSQL, query.Args...).Count(&count))
 	return count, err
 }
 
@@ -358,9 +373,19 @@ func applyTimeRanges(db *gorm.DB, ranges []TimeRange) *gorm.DB {
 	return db
 }
 
+func applyQueryLimit(db *gorm.DB, limit int) (*gorm.DB, error) {
+	if limit < 0 {
+		return nil, fmt.Errorf("%w: limit", ErrInvalidQueryRange)
+	}
+	if limit > 0 {
+		db = db.Limit(limit)
+	}
+	return db, nil
+}
+
 // SelectPageByCond 通过实体条件分页查询，条件中的零值字段将被自动忽略。
 func (b BaseMapper[T]) SelectPageByCond(query PageQuery[T], result *[]*T) (total int64, err error) {
-	if query.PageNumber <= 0 || query.PageSize <= 0 {
+	if query.Number <= 0 || query.Size <= 0 {
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
@@ -380,7 +405,7 @@ func (b BaseMapper[T]) SelectPageByCond(query PageQuery[T], result *[]*T) (total
 		return 0, err
 	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
-	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
+	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(query.Size).Offset((query.Number - 1) * query.Size).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -389,7 +414,7 @@ func (b BaseMapper[T]) SelectPageByCond(query PageQuery[T], result *[]*T) (total
 
 // SelectPageByMap 通过 Map 条件分页查询，支持显式查询零值字段。
 func (b BaseMapper[T]) SelectPageByMap(query MapPageQuery, result *[]*T) (total int64, err error) {
-	if query.PageNumber <= 0 || query.PageSize <= 0 {
+	if query.Number <= 0 || query.Size <= 0 {
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
@@ -409,7 +434,7 @@ func (b BaseMapper[T]) SelectPageByMap(query MapPageQuery, result *[]*T) (total 
 		return 0, err
 	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
-	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
+	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(query.Size).Offset((query.Number - 1) * query.Size).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -418,7 +443,7 @@ func (b BaseMapper[T]) SelectPageByMap(query MapPageQuery, result *[]*T) (total 
 
 // SelectPageByWhere 通过原始 SQL 分页查询
 func (b BaseMapper[T]) SelectPageByWhere(query WherePageQuery, result *[]*T) (total int64, err error) {
-	if query.PageNumber <= 0 || query.PageSize <= 0 {
+	if query.Number <= 0 || query.Size <= 0 {
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
@@ -438,7 +463,7 @@ func (b BaseMapper[T]) SelectPageByWhere(query WherePageQuery, result *[]*T) (to
 		return 0, err
 	}
 	selectDB = applyTimeRanges(selectDB, query.TimeRanges)
-	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Limit(query.PageSize).Offset((query.PageNumber - 1) * query.PageSize).Scan(result))
+	_, err = checkResult(selectDB.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Limit(query.Size).Offset((query.Number - 1) * query.Size).Scan(result))
 	if err != nil {
 		return 0, err
 	}
@@ -476,7 +501,7 @@ func (b BaseMapper[T]) SelectPageByWrapper(query *PageWrapper[T], result *[]*T) 
 	if query == nil {
 		return 0, ErrNilQueryWrapper
 	}
-	if query.pageNumber <= 0 || query.pageSize <= 0 {
+	if query.number <= 0 || query.size <= 0 {
 		return 0, ErrInvalidPage
 	}
 	countDB, err := b.tableDB()
@@ -498,8 +523,8 @@ func (b BaseMapper[T]) SelectPageByWrapper(query *PageWrapper[T], result *[]*T) 
 	if err != nil {
 		return 0, err
 	}
-	offset := (query.pageNumber - 1) * query.pageSize
-	_, err = checkResult(selectDB.Limit(query.pageSize).Offset(offset).Scan(result))
+	offset := (query.number - 1) * query.size
+	_, err = checkResult(selectDB.Limit(query.size).Offset(offset).Scan(result))
 	return total, err
 }
 

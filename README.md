@@ -130,6 +130,29 @@ Condition suffixes describe how a query is built:
 - `ByGorm`: callback for custom GORM construction.
 - `WithMap`: map values used for inserts or updates.
 
+Count operations use the same condition query structures; projection and ordering do not participate in the count:
+
+```go
+total, err := mapper.CountByCond(
+	gormstarter.NewCondQuery(Teacher{Sex: 1}),
+)
+```
+
+Set `QueryOptions.Limit` to a positive value for top-N list queries. Zero leaves the result unrestricted; negative values return `ErrInvalidQueryRange`. Count, single-result, and pagination queries do not apply this limit.
+
+Query structures also provide immutable chain methods for concise construction:
+
+```go
+query := gormstarter.NewCondQuery(Teacher{Sex: 1}).
+	OrderBy("created_at desc").
+	Select("id", "name").
+	WithLimit(20)
+
+page := gormstarter.NewPageQuery(Teacher{Sex: 1}, 1, 20).
+	OrderBy("created_at desc").
+	Select("id", "name")
+```
+
 `Insert` includes zero-value fields. Use `InsertWithoutZeroFields` to omit them, or map and explicit-column APIs when zero values must be controlled precisely.
 
 ## Type-safe Wrappers

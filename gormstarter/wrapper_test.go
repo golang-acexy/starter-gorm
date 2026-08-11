@@ -52,3 +52,15 @@ func TestColumnSelectorRejectsInvalidSelector(t *testing.T) {
 		return &value
 	})
 }
+
+func TestPageWrapperOptions(t *testing.T) {
+	query := newPageWrapper[wrapperModel](2, 20)
+	if query.Number() != 2 || query.Size() != 20 {
+		t.Fatalf("分页参数错误: number=%d size=%d", query.Number(), query.Size())
+	}
+
+	var nilQuery *PageWrapper[wrapperModel]
+	if nilQuery.Number() != 0 || nilQuery.Size() != 0 {
+		t.Fatal("nil PageWrapper 应返回零值分页参数")
+	}
+}

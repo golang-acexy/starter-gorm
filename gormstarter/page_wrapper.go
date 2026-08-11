@@ -3,17 +3,33 @@ package gormstarter
 // PageWrapper 定义可组合的单表分页查询，分页范围由页码和每页记录数唯一确定。
 // PageWrapper 不提供 Limit 和 Offset，避免与页码分页产生冲突。
 type PageWrapper[T Model] struct {
-	query      *QueryWrapper[T]
-	pageNumber int
-	pageSize   int
+	query  *QueryWrapper[T]
+	number int
+	size   int
 }
 
-func newPageWrapper[T Model](pageNumber, pageSize int) *PageWrapper[T] {
+func newPageWrapper[T Model](number, size int) *PageWrapper[T] {
 	return &PageWrapper[T]{
-		query:      NewQueryWrapper[T](),
-		pageNumber: pageNumber,
-		pageSize:   pageSize,
+		query:  NewQueryWrapper[T](),
+		number: number,
+		size:   size,
 	}
+}
+
+// Number 返回从 1 开始的请求页码。
+func (p *PageWrapper[T]) Number() int {
+	if p == nil {
+		return 0
+	}
+	return p.number
+}
+
+// Size 返回每页请求的记录数。
+func (p *PageWrapper[T]) Size() int {
+	if p == nil {
+		return 0
+	}
+	return p.size
 }
 
 // Where 追加 Predicate 条件；多次调用以及同次传入的多个条件均按 AND 连接。

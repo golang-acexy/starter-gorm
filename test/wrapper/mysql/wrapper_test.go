@@ -91,6 +91,19 @@ func TestWrapperAllCapabilities(t *testing.T) {
 		t.Fatalf("Select 投影未生效: %+v", records[0])
 	}
 
+	var limitedRecords []*Teacher
+	if _, err := mapper.SelectByCond(gormstarter.CondQuery[Teacher]{Condition: Teacher{Sex: 1}, QueryOptions: gormstarter.QueryOptions{Limit: 1}}, &limitedRecords); err != nil || len(limitedRecords) != 1 {
+		t.Fatalf("CondQuery Limit 异常: records=%d err=%v", len(limitedRecords), err)
+	}
+	limitedRecords = nil
+	if _, err := mapper.SelectByMap(gormstarter.MapQuery{Condition: map[string]any{"sex": 1}, QueryOptions: gormstarter.QueryOptions{Limit: 1}}, &limitedRecords); err != nil || len(limitedRecords) != 1 {
+		t.Fatalf("MapQuery Limit 异常: records=%d err=%v", len(limitedRecords), err)
+	}
+	limitedRecords = nil
+	if _, err := mapper.SelectByWhere(gormstarter.WhereQuery{RawWhereSQL: "name LIKE ?", Args: []any{scope + "%"}, QueryOptions: gormstarter.QueryOptions{Limit: 1}}, &limitedRecords); err != nil || len(limitedRecords) != 1 {
+		t.Fatalf("WhereQuery Limit 异常: records=%d err=%v", len(limitedRecords), err)
+	}
+
 	oneQuery := mapper.Wrapper().HasPrefix(c.Name, scope).OrderByAsc(c.Age)
 	var first Teacher
 	if rows, err := mapper.SelectOneByWrapper(oneQuery, &first); err != nil || rows != 1 || first.Age != 10 {
@@ -129,6 +142,9 @@ func TestWrapperValidation(t *testing.T) {
 	}
 	if _, err := mapper.SelectByWrapper(mapper.Wrapper().Limit(-1), &records); !errors.Is(err, gormstarter.ErrInvalidQueryRange) {
 		t.Fatalf("非法 Limit 错误 = %v", err)
+	}
+	if _, err := mapper.SelectByCond(gormstarter.CondQuery[Teacher]{QueryOptions: gormstarter.QueryOptions{Limit: -1}}, &records); !errors.Is(err, gormstarter.ErrInvalidQueryRange) {
+		t.Fatalf("QueryOptions 非法 Limit 错误 = %v", err)
 	}
 	if _, err := mapper.SelectByWrapper(mapper.Wrapper().Offset(-1), &records); !errors.Is(err, gormstarter.ErrInvalidQueryRange) {
 		t.Fatalf("非法 Offset 错误 = %v", err)

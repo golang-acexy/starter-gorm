@@ -51,12 +51,15 @@ type QueryOptions struct {
 	OrderBySQL    string
 	SelectColumns []string
 	TimeRanges    []TimeRange // 基于时间的过滤条件，支持多个时间字段
+	Limit         int
 }
 
 type PageOptions struct {
-	PageNumber int
-	PageSize   int
-	QueryOptions
+	Number        int
+	Size          int
+	OrderBySQL    string
+	SelectColumns []string
+	TimeRanges    []TimeRange
 }
 
 type PageQuery[T Model] struct {
@@ -178,14 +181,14 @@ type QueryMapper[T Model] interface {
 	// SelectByWrapper 使用类型安全的 Wrapper 查询数据。
 	SelectByWrapper(query *QueryWrapper[T], result *[]*T) (int64, error)
 
-	// CountByCond 通过条件查询数据总数 查询条件零值字段将被自动忽略
-	CountByCond(condition T) (int64, error)
+	// CountByCond 通过实体条件统计数据，条件中的零值字段将被自动忽略。
+	CountByCond(query CondQuery[T]) (int64, error)
 
-	// CountByMap 通过指定字段与值查询数据总数 解决零值条件问题
-	CountByMap(condition map[string]any) (int64, error)
+	// CountByMap 通过 Map 条件统计数据，支持显式零值条件。
+	CountByMap(query MapQuery) (int64, error)
 
-	// CountByWhere 通过原始SQL查询数据总数
-	CountByWhere(rawWhereSQL string, args ...any) (int64, error)
+	// CountByWhere 通过原始 SQL 条件统计数据。
+	CountByWhere(query WhereQuery) (int64, error)
 
 	// CountByGorm 通过原始Gorm查询数据总数
 	CountByGorm(rawDB func(*gorm.DB)) (int64, error)

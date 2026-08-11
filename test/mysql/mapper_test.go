@@ -312,8 +312,8 @@ func TestSelectPageByCond(t *testing.T) {
 	fmt.Println(bm.SelectPageByCond(gormstarter.PageQuery[model.Teacher]{
 		Condition: model.Teacher{Sex: 1},
 		PageOptions: gormstarter.PageOptions{
-			PageNumber: 2,
-			PageSize:   3,
+			Number: 2,
+			Size:   3,
 		},
 	}, teachers))
 	for _, teacher := range *teachers {
@@ -326,7 +326,7 @@ func TestSelectPageByMap(t *testing.T) {
 	teachers := new([]*model.Teacher)
 	fmt.Println(bm.SelectPageByMap(gormstarter.MapPageQuery{
 		Condition:   map[string]any{"sex": 0},
-		PageOptions: gormstarter.PageOptions{PageNumber: 2, PageSize: 2},
+		PageOptions: gormstarter.PageOptions{Number: 2, Size: 2},
 	}, teachers))
 	for _, teacher := range *teachers {
 		fmt.Printf("%+v\n", *teacher)
@@ -360,10 +360,8 @@ func TestUpdateByMap(t *testing.T) {
 
 func TestCount(t *testing.T) {
 	var bm model.TeacherMapper
-	fmt.Println(bm.CountByMap(map[string]any{"age": 0}))
-	fmt.Println(bm.CountByCond(model.Teacher{
-		Age: 1,
-	}))
+	fmt.Println(bm.CountByMap(gormstarter.MapQuery{Condition: map[string]any{"age": 0}}))
+	fmt.Println(bm.CountByCond(gormstarter.CondQuery[model.Teacher]{Condition: model.Teacher{Age: 1}}))
 }
 
 func TestTransaction(t *testing.T) {
