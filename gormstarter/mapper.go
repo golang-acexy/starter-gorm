@@ -6,6 +6,7 @@ import (
 	stdreflect "reflect"
 	"strings"
 
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/reflect"
 	"gorm.io/gorm"
@@ -202,7 +203,18 @@ func (b BaseMapper[T]) SelectOneByWhere(query WhereQuery, result *T) (int64, err
 		return 0, err
 	}
 	db = applyTimeRanges(db, query.TimeRanges)
-	return checkResult(db.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Limit(1).Scan(result))
+	rowsAffected, err := checkResult(db.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Scan(result))
+	if err != nil {
+		return 0, err
+	}
+	if rowsAffected > 1 {
+		// 原始 SQL 的限制条件由调用方负责；返回多行时提示单条查询语义可能不明确。
+		logger.Logrus().WithFields(map[string]any{
+			"table":        b.model.TableName(),
+			"rowsAffected": rowsAffected,
+		}).Warnln("SelectOneByWhere queried more than one row")
+	}
+	return rowsAffected, nil
 }
 
 // SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
