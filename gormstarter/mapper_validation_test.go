@@ -25,9 +25,11 @@ func TestWriteValidation(t *testing.T) {
 		{name: "nil upsert", run: func() error { _, err := mapper.InsertOrUpdateByPrimaryKey(nil); return err }, want: ErrNilEntity},
 		{name: "empty batch", run: func() error { _, err := mapper.InsertBatch(nil); return err }, want: ErrNoFieldToSave},
 		{name: "nil batch entity", run: func() error { _, err := mapper.InsertBatch([]*validationModel{nil}); return err }, want: ErrNilEntity},
-		{name: "nil update", run: func() error { _, err := mapper.UpdateByID(nil); return err }, want: ErrNilEntity},
-		{name: "empty update", run: func() error { _, err := mapper.UpdateByID(&validationModel{ID: 1}); return err }, want: ErrNoFieldToUpdate},
-		{name: "empty non-zero update", run: func() error { _, err := mapper.UpdateByIDWithoutZeroFields(&validationModel{ID: 1}); return err }, want: ErrNoFieldToUpdate},
+		{name: "nil update", run: func() error { _, err := mapper.UpdateByID(nil, 1); return err }, want: ErrNilEntity},
+		{name: "empty update", run: func() error { _, err := mapper.UpdateByID(&validationModel{}, 1); return err }, want: ErrNoFieldToUpdate},
+		{name: "empty non-zero update", run: func() error { _, err := mapper.UpdateByIDWithoutZeroFields(&validationModel{}, 1); return err }, want: ErrNoFieldToUpdate},
+		{name: "empty update ID", run: func() error { _, err := mapper.UpdateByID(&validationModel{Name: "updated"}, 0); return err }, want: ErrEmptyID},
+		{name: "empty map update ID", run: func() error { _, err := mapper.UpdateByIDWithMap(map[string]any{"name": "updated"}, 0); return err }, want: ErrEmptyID},
 		{name: "nil condition update", run: func() error { _, err := mapper.UpdateByCond(nil, validationModel{ID: 1}); return err }, want: ErrNilEntity},
 		{name: "empty update condition", run: func() error {
 			_, err := mapper.UpdateByCond(&validationModel{Name: "updated"}, validationModel{})
@@ -44,6 +46,7 @@ func TestWriteValidation(t *testing.T) {
 		{name: "nil update where", run: func() error { _, err := mapper.UpdateByWhere(nil, "id = ?", 1); return err }, want: ErrNilEntity},
 		{name: "empty update where", run: func() error { _, err := mapper.UpdateByWhere(&validationModel{Name: "updated"}, " "); return err }, want: ErrEmptyWhereSQL},
 		{name: "empty delete IDs", run: func() error { _, err := mapper.DeleteByIDs(nil); return err }, want: ErrEmptyIDs},
+		{name: "empty delete ID", run: func() error { _, err := mapper.DeleteByID(0); return err }, want: ErrEmptyID},
 		{name: "empty delete condition", run: func() error { _, err := mapper.DeleteByCond(validationModel{}); return err }, want: ErrEmptyCondition},
 		{name: "empty delete where", run: func() error { _, err := mapper.DeleteByWhere(" "); return err }, want: ErrEmptyWhereSQL},
 	}

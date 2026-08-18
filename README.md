@@ -1,14 +1,23 @@
 # starter-gorm
 
-`starter-gorm` is the relational database starter for the golang-acexy starter/cloud ecosystem. It integrates GORM with the shared starter lifecycle, provides managed MySQL and PostgreSQL connections, routes models to the correct database type, and exposes a generic `BaseMapper` for common SQL operations.
+`starter-gorm` brings GORM into the golang-acexy starter lifecycle. It manages MySQL and PostgreSQL connections and provides generic Mapper APIs plus composable, model-aware query and update wrappers.
 
-## Ecosystem Role
+## Highlights
 
-Use this starter for direct relational persistence and SQL-oriented Mapper APIs. `cloud-database/rds` builds business-oriented Repository APIs on top of these mappers without taking ownership of database lifecycle.
+- One starter can manage MySQL, PostgreSQL, or both.
+- Models can select their database through `DBType()`.
+- `BaseMapper[T]` covers common query, insert, update, delete, count, and pagination operations.
+- `QueryWrapper` builds complex single-table queries without hard-coded column names.
+- `UpdateWrapper` combines reusable conditions with explicit `Set` assignments, including zero and `nil` values.
+- Empty-condition updates and deletes are rejected before reaching GORM.
+- Transactions preserve the concrete Mapper type.
+- GORM naming strategies, `column` tags, and embedded fields are resolved at execution time.
+
+`cloud-database/rds` builds business-oriented Repository APIs on top of this module; database lifecycle remains owned by `starter-gorm`.
 
 ## Requirements
 
-Current module Go version: `1.25.8`.
+- Go `1.25.8`
 
 ## Installation
 
@@ -16,9 +25,9 @@ Current module Go version: `1.25.8`.
 go get github.com/golang-acexy/starter-gorm
 ```
 
-## Starter Usage
+## Quick Start
 
-Register one `GormStarter` with the parent loader. A single starter instance can manage MySQL, PostgreSQL, or both database types.
+Register `GormStarter` with the parent loader:
 
 ```go
 starter := &gormstarter.GormStarter{
@@ -44,103 +53,29 @@ if err := loader.Start(); err != nil {
 }
 ```
 
-Use `LazyConfig` when configuration must be resolved immediately before startup. When both `Config` and `LazyConfig` are provided, `LazyConfig` takes precedence.
+Use `LazyConfig` to resolve configuration immediately before startup. It takes precedence over `Config` when both are present. Stop connections through the parent loader so they participate in the shared shutdown lifecycle.
 
-```go
-starter := &gormstarter.GormStarter{
-	LazyConfig: func() gormstarter.GormConfig {
-		return loadDatabaseConfig()
-	},
-}
-```
+## Configuration
 
-Stop the starter through the parent loader so database connections participate in the shared shutdown lifecycle.
+Common `DatabaseConfig` fields:
 
-```go
-_, err := loader.StopAllByRegisteredOrder(10 * time.Second)
-if err != nil {
-	panic(err)
-}
-```
-
-## Database Configuration
-
-Common database options are defined by `DatabaseConfig`:
-
-| Field | Description |
+| Field | Purpose |
 | --- | --- |
-| `Username` | Database username. |
-| `Password` | Database password. |
-| `Host` | Database host. |
-| `Port` | Database port. |
-| `Database` | Database name. |
-| `TimeUTC` | Uses UTC for GORM-generated timestamps. |
-| `DryRun` | Generates SQL without executing it. |
+| `Username`, `Password` | Database credentials. |
+| `Host`, `Port`, `Database` | Connection target. |
+| `TimeUTC` | Use UTC for GORM-generated timestamps. |
+| `DryRun` | Generate SQL without executing it. |
 
-MySQL-specific options:
+MySQL adds `Charset` and `URLParams`; PostgreSQL adds `Timezone` and `SSLMode`. `SQLLoggerLevel` controls SQL logging, and `InitFunc` runs after startup with a snapshot of the initialized database map.
 
-| Field | Description |
-| --- | --- |
-| `Charset` | Connection charset; defaults to `utf8mb4`. |
-| `URLParams` | Additional URL query parameters. `parseTime` and `charset` remain starter-managed. |
+Configure both `MySQL` and `Postgres` in the same `GormConfig` when needed. Database routing follows these rules:
 
-PostgreSQL-specific options:
-
-| Field | Description |
-| --- | --- |
-| `Timezone` | Connection timezone; defaults to `UTC`. |
-| `SSLMode` | PostgreSQL SSL mode; defaults to `disable`. |
-
-`SQLLoggerLevel` configures the shared SQL logger. `InitFunc` runs after startup and receives a snapshot of the initialized database map.
-
-## MySQL and PostgreSQL Together
-
-Configure both database types on the same starter:
+- A model implementing `ModelWithDBType` uses its declared database.
+- With one configured database, ordinary models use that database.
+- With both configured, ordinary models default to MySQL.
+- Selecting an uninitialized database returns `ErrDatabaseNotRegistered`.
 
 ```go
-starter := &gormstarter.GormStarter{
-	Config: gormstarter.GormConfig{
-		MySQL: &gormstarter.MySQLConfig{
-			DatabaseConfig: gormstarter.DatabaseConfig{
-				Username: "YOUR_MYSQL_USERNAME",
-				Password: "YOUR_MYSQL_PASSWORD",
-				Host:     "127.0.0.1",
-				Port:     3306,
-				Database: "app",
-			},
-		},
-		Postgres: &gormstarter.PostgresConfig{
-			DatabaseConfig: gormstarter.DatabaseConfig{
-				Username: "YOUR_POSTGRES_USERNAME",
-				Password: "YOUR_POSTGRES_PASSWORD",
-				Host:     "127.0.0.1",
-				Port:     5432,
-				Database: "analytics",
-			},
-			Timezone: "UTC",
-			SSLMode:  "require",
-		},
-	},
-}
-```
-
-Database selection follows these rules:
-
-- With one configured database type, models without `DBType()` use that database.
-- With both database types configured, models without `DBType()` use MySQL.
-- A model implementing `ModelWithDBType` is always routed to its declared database type.
-- Declaring a database type that was not initialized returns `ErrDatabaseNotRegistered`.
-
-```go
-type Employee struct {
-	ID   uint64
-	Name string
-}
-
-func (Employee) TableName() string {
-	return "employee"
-}
-
 func (Employee) DBType() gormstarter.DBType {
 	return gormstarter.DBTypePostgres
 }
@@ -148,271 +83,204 @@ func (Employee) DBType() gormstarter.DBType {
 
 ## Model and Mapper
 
-A model only needs to provide its table name. Embed `BaseMapper[T]` in a model-specific mapper to obtain the complete mapper API.
+A model provides its table name. Embedding `BaseMapper[T]` exposes the complete Mapper API without a constructor:
 
 ```go
 type Teacher struct {
 	ID        uint64                `gorm:"primaryKey"`
-	CreatedAt gormstarter.Timestamp `gorm:"column:create_time"`
-	UpdatedAt gormstarter.Timestamp `gorm:"column:update_time"`
+	CreatedAt gormstarter.Timestamp `gorm:"column:created_at"`
 	Name      string
 	Sex       uint
 	Age       uint
 }
 
-func (Teacher) TableName() string {
-	return "teacher"
-}
+func (Teacher) TableName() string { return "teacher" }
 
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]
 }
 ```
 
-No constructor or interface assertion is required. Methods embedded from `BaseMapper[Teacher]` are promoted automatically to `TeacherMapper`.
+The focused interfaces `QueryMapper`, `InsertMapper`, `UpdateMapper`, and `DeleteMapper` are aggregated by `Mapper[T]`. `RawMapper` provides access to the current GORM session.
 
-The mapper API is split into focused interfaces and aggregated by `Mapper[T]`:
-
-- `RawMapper` provides access to the current GORM session.
-- `QueryMapper[T]` provides select, count, and pagination operations.
-- `InsertMapper[T]` provides insert operations.
-- `UpdateMapper[T]` provides update operations.
-- `DeleteMapper[T]` provides delete operations.
-- `Mapper[T]` combines all capabilities above.
-
-## Common Mapper Operations
-
-All mapper methods return the affected row count and an error unless documented otherwise.
+Common operations:
 
 ```go
 mapper := TeacherMapper{}
-
 teacher := Teacher{Name: "Alice", Age: 30}
-if _, err := mapper.Insert(&teacher); err != nil {
-	return err
-}
+
+_, err := mapper.Insert(&teacher)
 
 var selected Teacher
-if _, err := mapper.SelectByID(teacher.ID, &selected); err != nil {
-	return err
-}
+_, err = mapper.SelectByID(teacher.ID, &selected)
 
-if _, err := mapper.UpdateByIDWithMap(
+_, err = mapper.UpdateByIDWithMap(
 	map[string]any{"name": "Alice Smith", "sex": 0},
 	teacher.ID,
-); err != nil {
-	return err
-}
+)
 
-if _, err := mapper.DeleteByID(teacher.ID); err != nil {
-	return err
-}
+_, err = mapper.DeleteByID(teacher.ID)
 ```
 
-Method suffixes describe the condition source:
+Condition suffixes describe how a query is built:
 
-- `ByCond` uses a model value as the condition and ignores its zero-value fields.
-- `ByMap` uses `map[string]any` as the condition and can express zero values explicitly.
-- `ByWhere` accepts a raw SQL `WHERE` expression and its arguments.
-- `ByGorm` accepts callbacks for custom GORM query construction.
-- `WithMap` means the map contains values to insert or update rather than query conditions.
+- `ByCond`: model condition; zero-value fields follow GORM's condition behavior.
+- `ByMap`: map condition; zero values can be expressed explicitly.
+- `ByWhere`: raw SQL condition with arguments.
+- `ByGorm`: callback for custom GORM construction.
+- `WithMap`: map values used for inserts or updates.
 
-Examples:
+Count operations use the same condition query structures; projection and ordering do not participate in the count:
 
 ```go
+total, err := mapper.CountByCond(
+	gormstarter.NewCondQuery(Teacher{Sex: 1}),
+)
+```
+
+Set `QueryOptions.Limit` to a positive value for top-N list queries. Zero leaves the result unrestricted; negative values return `ErrInvalidQueryRange`. Count, single-result, and pagination queries do not apply this limit.
+
+Query structures also provide immutable chain methods for concise construction:
+
+```go
+query := gormstarter.NewCondQuery(Teacher{Sex: 1}).
+	OrderBy("created_at desc").
+	Select("id", "name").
+	WithLimit(20)
+
+page := gormstarter.NewPageQuery(Teacher{Sex: 1}, 1, 20).
+	OrderBy("created_at desc").
+	Select("id", "name")
+```
+
+`Insert` includes zero-value fields. Use `InsertWithoutZeroFields` to omit them, or map and explicit-column APIs when zero values must be controlled precisely.
+
+## Type-safe Wrappers
+
+Columns are declared from Go field selectors. Their database names are resolved from the active GORM schema, so Wrapper code stays aligned with model tags and naming strategies.
+
+```go
+type TeacherColumns struct {
+	ID        gormstarter.Column[Teacher, uint64]
+	Name      gormstarter.Column[Teacher, string]
+	Age       gormstarter.Column[Teacher, uint]
+	CreatedAt gormstarter.Column[Teacher, gormstarter.Timestamp]
+}
+
+var teacherColumns = TeacherColumns{
+	ID:        gormstarter.NewColumn(func(v *Teacher) *uint64 { return &v.ID }),
+	Name:      gormstarter.NewColumn(func(v *Teacher) *string { return &v.Name }),
+	Age:       gormstarter.NewColumn(func(v *Teacher) *uint { return &v.Age }),
+	CreatedAt: gormstarter.NewColumn(func(v *Teacher) *gormstarter.Timestamp { return &v.CreatedAt }),
+}
+
+func (TeacherMapper) Columns() *TeacherColumns { return &teacherColumns }
+```
+
+### QueryWrapper
+
+```go
+mapper := TeacherMapper{}
+c := mapper.Columns()
+
+query := mapper.Wrapper().
+	Ge(c.Age, 18).
+	Where(gormstarter.Or(
+		c.Name.HasPrefix("Ace"),
+		c.Name.Contains("admin"),
+	)).
+	Select(c.ID, c.Name).
+	OrderByDesc(c.CreatedAt).
+	Limit(20)
+
 var teachers []*Teacher
-
-_, err := mapper.SelectByCond(
-	Teacher{Sex: 1},
-	"id desc",
-	&teachers,
-)
-
-_, err = mapper.SelectByMap(
-	map[string]any{"sex": 0},
-	"id desc",
-	&teachers,
-)
-
-_, err = mapper.SelectByWhere(
-	"age >= ?",
-	"id desc",
-	&teachers,
-	18,
-)
+_, err := mapper.SelectByWrapper(query, &teachers)
 ```
 
-Empty maps are rejected for condition-based update and delete operations to prevent accidental full-table changes.
+Wrapper query APIs include `SelectOneByWrapper`, `SelectByWrapper`, and `CountByWrapper`. Count queries ignore projection, ordering, limit, and offset.
 
-## Zero-Value Writes
-
-`Insert` includes zero-value fields by default. Pass columns to omit when needed:
+### UpdateWrapper
 
 ```go
-_, err := mapper.Insert(&teacher, "created_at")
+update := mapper.UpdateWrapper().
+	Eq(c.ID, 1).
+	Set(c.Name, "updated").
+	Set(c.Age, 0)
+
+rows, err := mapper.UpdateByWrapper(update)
 ```
 
-Use `InsertWithoutZeroFields` to include only non-zero fields, or `InsertWithMap` to control values explicitly:
-
-```go
-_, err := mapper.InsertWithoutZeroFields(&teacher)
-
-_, err = mapper.InsertWithMap(map[string]any{
-	"name": "Alice",
-	"sex":  0,
-})
-```
-
-Updates support the same explicit zero-value control:
-
-```go
-_, err := mapper.UpdateByIDWithoutZeroFields(&teacher, "sex")
-
-_, err = mapper.UpdateByCondWithZeroFields(
-	&Teacher{Sex: 0},
-	Teacher{Name: "Alice"},
-	"sex",
-)
-```
+An update requires at least one condition and one assignment. Zero and `nil` assignments are retained; repeated assignments to the same field use the last value.
 
 ## Pagination
 
-Pagination starts at page number `1`. Both page number and page size must be greater than zero.
+Page numbers start at `1`; page number and page size must both be positive.
 
 ```go
-var teachers []*Teacher
+pageQuery := mapper.PageWrapper(1, 20).
+	Eq(c.Age, 18).
+	Select(c.ID, c.Name).
+	OrderByDesc(c.CreatedAt)
 
-total, err := mapper.SelectPageByMap(
-	map[string]any{"sex": 1},
-	gormstarter.PageQuery{
-		PageNumber:     1,
-		PageSize:       20,
-		OrderBySQL:     "id desc",
-		SpecifyColumns: []string{"id", "name", "age"},
-	},
-	&teachers,
-)
+var records []*Teacher
+total, err := mapper.SelectPageByWrapper(pageQuery, &records)
 ```
 
-`total` is the number of matching rows before pagination. Invalid pagination returns `ErrInvalidPage`.
+`PageWrapper` is an independent pagination type. It reuses query conditions, projection, and ordering, but does not expose `Limit` or `Offset`; ordinary `QueryWrapper` values cannot be passed to `SelectPageByWrapper`.
 
-Typed conditions are input values, while query destinations remain pointers: use `T` for a condition, `*T` for one result, and `*[]*T` for multiple results.
-
-`PageQuery.TimeRanges` adds left-closed, right-open time filters to both the count and page queries:
-
-```go
-start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
-end := start.Add(24 * time.Hour)
-
-total, err := mapper.SelectPageByCond(
-	Teacher{Sex: 1},
-	gormstarter.PageQuery{
-		PageNumber: 1,
-		PageSize:   20,
-		OrderBySQL: "id desc",
-		TimeRanges: []gormstarter.TimeRange{
-			{Field: "created_at", StartTime: &start, EndTime: &end},
-		},
-	},
-	&teachers,
-)
-```
-
-`StartTime` or `EndTime` may be nil for an open bound. `Field` is a database column identifier and must come from trusted application configuration rather than unchecked client input.
+Struct, map, and raw-Where pagination variants are available through `PageQuery`, `MapPageQuery`, and `WherePageQuery`; `SelectPageByGorm` accepts callbacks for fully custom queries. `TimeRanges` adds left-closed, right-open time filters to both count and page queries; either bound may be omitted.
 
 ## Transactions
 
-Transactions use native GORM transaction lifecycle. A model-specific mapper should expose a small wrapper that preserves its concrete type:
+Expose a small model-specific helper to preserve the concrete Mapper type:
 
 ```go
 func (m TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
-	return TeacherMapper{
-		BaseMapper: m.BaseMapper.GetBaseMapperWithTx(tx),
-	}
+	return TeacherMapper{BaseMapper: m.BaseMapper.GetBaseMapperWithTx(tx)}
 }
 ```
 
-Use the transaction mapper for every operation that belongs to the transaction:
+Use the transaction Mapper for every operation in the transaction. The code that starts the transaction owns commit and rollback, and a completed transaction Mapper must not be reused.
 
 ```go
 db := gormstarter.RawMysqlGormDB()
-if db == nil {
-	return gormstarter.ErrGormStarterNotStarted
-}
-
 tx := db.Begin()
-if tx.Error != nil {
-	return tx.Error
-}
 defer tx.Rollback()
 
 txMapper := mapper.WithTxMapper(tx)
 if _, err := txMapper.Insert(&Teacher{Name: "Alice"}); err != nil {
 	return err
 }
-
 return tx.Commit().Error
 ```
 
-Use `NewBaseMapperWithTx` when a new transaction should be created from the database selected for the mapper model:
-
-```go
-txMapper := mapper.NewBaseMapperWithTx()
-tx := txMapper.CurrentGormDB()
-defer tx.Rollback()
-```
-
-The caller owns commit and rollback. Do not reuse a transaction mapper after its transaction has completed.
-
 ## Raw GORM Access
 
-Use the typed accessors when database type matters:
+Use typed accessors when the database type matters:
 
 ```go
 mysqlDB := gormstarter.RawMysqlGormDB()
 postgresDB := gormstarter.RawPostgresGormDB()
-```
-
-`RawGormDB()` returns the default database. Pass a type explicitly to select one:
-
-```go
 db := gormstarter.RawGormDB(gormstarter.DBTypePostgres)
 ```
 
-Raw accessors return `nil` when the requested database is not initialized. Mapper operations return package errors instead of exposing a nil database.
+Raw accessors return `nil` when the requested database is unavailable. Mapper operations return package errors instead. `TableGormDB` applies the model table, while `CurrentGormDB` returns the bound transaction or the model-selected database.
 
-For mapper-scoped raw access:
+## Safety and Errors
 
-```go
-tableDB := mapper.TableGormDB()
-currentDB := mapper.CurrentGormDB()
-```
+- Empty-condition updates and deletes return `ErrEmptyCondition`.
+- Empty Wrapper assignments return `ErrNoFieldToUpdate`.
+- Invalid pagination or Wrapper ranges return `ErrInvalidPage` or `ErrInvalidQueryRange`.
+- Nil entities return `ErrNilEntity`; empty ID batches return `ErrEmptyIDs`.
+- An unavailable starter or database returns `ErrGormStarterNotStarted` or `ErrDatabaseNotRegistered`.
+- Raw Where updates and deletes reject empty expressions with `ErrEmptyWhereSQL`.
 
-`TableGormDB` applies the model table name. `CurrentGormDB` returns the bound transaction when present, otherwise the model-selected database. The starter lifecycle guarantees these mapper accessors are used only after database startup.
-
-## Common Errors
-
-- `ErrNoDatabaseConfigured`: neither MySQL nor PostgreSQL was configured.
-- `ErrGormStarterAlreadyStarted`: the package-level starter instance is already running.
-- `ErrGormStarterNotStarted`: no default database is available.
-- `ErrDatabaseNotRegistered`: a model requested an uninitialized database type.
-- `ErrGormStopTimeout`: database shutdown did not complete before the timeout.
-- `ErrInvalidPage`: page number or page size is invalid.
-- `ErrNoFieldToSave`: an insert contains no writable fields.
-- `ErrNoFieldToUpdate`: an update contains no fields.
-- `ErrEmptyCondition`: a protected update or delete has an empty condition.
-- `ErrNilEntity`: an insert or update entity is nil, or a batch contains a nil entity.
-- `ErrEmptyIDs`: a batch ID delete contains no IDs.
-- `ErrEmptyWhereSQL`: a protected update or delete has an empty raw Where expression.
+GORM's missing-Where protection remains the final safeguard after package-level validation.
 
 ## Design Notes
 
 - Runtime database instances are package-global and managed by one starter lifecycle.
-- Start the GORM starter once and stop it through the parent loader.
-- MySQL and PostgreSQL are initialized and stopped together when both are configured.
-- The map passed to `InitFunc` and returned by `Start` is a copy; modifying it does not replace the starter registry.
-- `BaseMapper` is a value type. Transaction helpers return a new mapper rather than modifying the original mapper.
-- Condition structs ignore zero values according to GORM behavior. Use map-based or explicit-column APIs when zero is meaningful.
-- Update and delete methods reject empty conditions before reaching GORM; GORM's missing-Where protection remains the final safeguard.
-- `Timestamp` supports SQL scanning, driver values, and JSON timestamp conversion through the shared toolkit.
-- The standard GORM starter does not allow parent-managed restart after successful shutdown.
+- `BaseMapper` is a value type; transaction helpers return a new Mapper.
+- MySQL and PostgreSQL start and stop together when both are configured.
+- `Timestamp` supports SQL scanning, driver values, and shared JSON timestamp conversion.
+- A successfully stopped GORM starter is not restartable through the parent lifecycle.

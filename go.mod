@@ -3,11 +3,11 @@ module github.com/golang-acexy/starter-gorm
 go 1.25.8
 
 require (
-	github.com/acexy/golang-toolkit v1.25.2
+	github.com/acexy/golang-toolkit v1.25.4
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/golang-acexy/starter-parent v1.25.0
 	github.com/lib/pq v1.12.3
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2
@@ -26,6 +26,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
