@@ -23,7 +23,6 @@ func (Teacher) DBType() gormstarter.DBType { return gormstarter.DBTypeMySQL }
 
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]
-
 }
 
 func (mapper TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
