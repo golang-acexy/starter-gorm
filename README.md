@@ -17,7 +17,7 @@
 
 ## Requirements
 
-- Go `1.25.8`
+- Go `1.26.7`
 
 ## Installation
 
@@ -279,8 +279,12 @@ GORM's missing-Where protection remains the final safeguard after package-level 
 
 ## Design Notes
 
-- Runtime database instances are package-global and managed by one starter lifecycle.
+- Runtime database instances are published as one immutable atomic snapshot and managed by one starter lifecycle; raw accessors do not hold lifecycle locks.
 - `BaseMapper` is a value type; transaction helpers return a new Mapper.
 - MySQL and PostgreSQL start and stop together when both are configured.
 - `Timestamp` supports SQL scanning, driver values, and shared JSON timestamp conversion.
 - A successfully stopped GORM starter is not restartable through the parent lifecycle.
+
+## Testing
+
+Run deterministic unit tests with `go test ./...`. Tests that connect to MySQL or PostgreSQL use the `integration` build tag and read connection settings from `STARTER_GORM_MYSQL_*` or `STARTER_GORM_POSTGRES_*` environment variables; run them explicitly with `go test -tags=integration ./test/...` after preparing the databases.

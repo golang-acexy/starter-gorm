@@ -1,13 +1,13 @@
 module github.com/golang-acexy/starter-gorm
 
-go 1.25.8
+go 1.26.7
 
 require (
-	github.com/acexy/golang-toolkit v1.25.4
+	github.com/acexy/golang-toolkit v1.26.0
 	github.com/go-sql-driver/mysql v1.10.0
-	github.com/golang-acexy/starter-parent v1.25.0
+	github.com/golang-acexy/starter-parent v1.26.0
 	github.com/lib/pq v1.12.3
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2

@@ -1,3 +1,5 @@
+//go:build integration
+
 package test
 
 import (
@@ -20,10 +22,10 @@ func init() {
 				return gormstarter.GormConfig{
 					Postgres: &gormstarter.PostgresConfig{
 						DatabaseConfig: gormstarter.DatabaseConfig{
-							Username: "postgres",
-							Password: "tech-acexy",
-							Database: "postgres",
-							Host:     "127.0.0.1",
+							Username: os.Getenv("STARTER_GORM_POSTGRES_USERNAME"),
+							Password: os.Getenv("STARTER_GORM_POSTGRES_PASSWORD"),
+							Database: os.Getenv("STARTER_GORM_POSTGRES_DATABASE"),
+							Host:     os.Getenv("STARTER_GORM_POSTGRES_HOST"),
 							Port:     5432,
 						},
 					},

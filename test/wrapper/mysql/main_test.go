@@ -1,3 +1,5 @@
+//go:build integration
+
 package mysql
 
 import (
@@ -16,10 +18,10 @@ func TestMain(m *testing.M) {
 		&gormstarter.GormStarter{LazyConfig: func() gormstarter.GormConfig {
 			return gormstarter.GormConfig{
 				MySQL: &gormstarter.MySQLConfig{DatabaseConfig: gormstarter.DatabaseConfig{
-					Username: "root",
-					Password: "root",
-					Database: "test",
-					Host:     "127.0.0.1",
+					Username: os.Getenv("STARTER_GORM_MYSQL_USERNAME"),
+					Password: os.Getenv("STARTER_GORM_MYSQL_PASSWORD"),
+					Database: os.Getenv("STARTER_GORM_MYSQL_DATABASE"),
+					Host:     os.Getenv("STARTER_GORM_MYSQL_HOST"),
 					Port:     13306,
 				}},
 				SQLLoggerLevel: logger.ErrorLevel,

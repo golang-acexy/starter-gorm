@@ -4,9 +4,11 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/golang-acexy/starter-parent/parent"
 	"gorm.io/gorm"
 )
@@ -14,10 +16,23 @@ import (
 const defaultCharset = "utf8mb4"
 
 var (
-	gormDBs        = make(map[DBType]*gorm.DB)
-	defaultDBType  DBType
-	sqlLoggerLevel logger.Level
-	gormDBsLock    sync.RWMutex
+	gormRuntimeState atomic.Pointer[gormRuntime]
+	gormLifecycleLock sync.Mutex
+	gormState gormLifecycleState
+)
+
+type gormRuntime struct {
+	databases     map[DBType]*gorm.DB
+	defaultDBType DBType
+}
+
+type gormLifecycleState uint8
+
+const (
+	gormStopped gormLifecycleState = iota
+	gormStarting
+	gormRunning
+	gormStopping
 )
 
 type DatabaseConfig struct {
@@ -53,22 +68,26 @@ type GormStarter struct {
 	Config      GormConfig
 	LazyConfig  func() GormConfig
 	config      *GormConfig
+	configOnce  sync.Once
 	GormSetting *parent.Setting
 }
 
 func (g *GormStarter) getConfig() *GormConfig {
-	if g.config == nil {
+	g.configOnce.Do(func() {
 		config := g.Config
 		if g.LazyConfig != nil {
 			config = g.LazyConfig()
 		}
+		if config.MySQL != nil {
+			mysqlConfig := *config.MySQL
+			config.MySQL = &mysqlConfig
+		}
+		if config.Postgres != nil {
+			postgresConfig := *config.Postgres
+			config.Postgres = &postgresConfig
+		}
 		g.config = &config
-	}
-	if g.config.SQLLoggerLevel < logger.InfoLevel {
-		sqlLoggerLevel = logger.DebugLevel
-	} else {
-		sqlLoggerLevel = g.config.SQLLoggerLevel
-	}
+	})
 	return g.config
 }
 
@@ -90,12 +109,21 @@ func (g *GormStarter) Start() (any, error) {
 		return nil, ErrNoDatabaseConfigured
 	}
 
-	gormDBsLock.RLock()
-	started := len(gormDBs) > 0
-	gormDBsLock.RUnlock()
-	if started {
+	gormLifecycleLock.Lock()
+	if gormState != gormStopped {
+		gormLifecycleLock.Unlock()
 		return nil, ErrGormStarterAlreadyStarted
 	}
+	gormState = gormStarting
+	gormLifecycleLock.Unlock()
+	started := false
+	defer func() {
+		if !started {
+			gormLifecycleLock.Lock()
+			gormState = gormStopped
+			gormLifecycleLock.Unlock()
+		}
+	}()
 
 	databases := make(map[DBType]*gorm.DB, 2)
 	if config.MySQL != nil {
@@ -122,18 +150,16 @@ func (g *GormStarter) Start() (any, error) {
 		databases[DBTypePostgres] = db
 	}
 
-	gormDBsLock.Lock()
-	defer gormDBsLock.Unlock()
-	if len(gormDBs) > 0 {
-		closeDatabases(databases)
-		return nil, ErrGormStarterAlreadyStarted
-	}
-	gormDBs = databases
+	defaultDBType := DBTypePostgres
 	if databases[DBTypeMySQL] != nil {
 		defaultDBType = DBTypeMySQL
-	} else {
-		defaultDBType = DBTypePostgres
 	}
+	runtime := &gormRuntime{databases: databases, defaultDBType: defaultDBType}
+	gormLifecycleLock.Lock()
+	gormRuntimeState.Store(runtime)
+	gormState = gormRunning
+	gormLifecycleLock.Unlock()
+	started = true
 	logger.Logrus().Infoln("Gorm-Starter databases started", "databaseTypes", databaseTypes(databases))
 	return cloneDatabases(databases), nil
 }
@@ -143,7 +169,7 @@ func (g *GormStarter) openDatabase(dbType DBType, config DatabaseConfig, open fu
 	rawConfig := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		DryRun:                                   config.DryRun,
-		Logger:                                   &logrusLogger{},
+		Logger:                                   &logrusLogger{level: effectiveSQLLoggerLevel(g.getConfig().SQLLoggerLevel)},
 	}
 	if config.TimeUTC {
 		rawConfig.NowFunc = func() time.Time { return time.Now().UTC() }
@@ -167,16 +193,16 @@ func (g *GormStarter) openDatabase(dbType DBType, config DatabaseConfig, open fu
 }
 
 func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	gormDBsLock.RLock()
-	if len(gormDBs) == 0 {
-		gormDBsLock.RUnlock()
+	gormLifecycleLock.Lock()
+	runtime := gormRuntimeState.Load()
+	if gormState != gormRunning || runtime == nil {
+		gormLifecycleLock.Unlock()
 		return false, true, ErrGormStarterNotStarted
 	}
-	databases := make(map[DBType]*gorm.DB, len(gormDBs))
-	for dbType, db := range gormDBs {
-		databases[dbType] = db
-	}
-	gormDBsLock.RUnlock()
+	gormRuntimeState.Store(nil)
+	gormState = gormStopping
+	gormLifecycleLock.Unlock()
+	databases := runtime.databases
 
 	var closeErrors []error
 	for dbType, db := range databases {
@@ -193,7 +219,10 @@ func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 		}
 	}
 	if len(closeErrors) > 0 {
-		return false, false, errors.Join(closeErrors...)
+		gormLifecycleLock.Lock()
+		gormState = gormStopped
+		gormLifecycleLock.Unlock()
+		return false, true, errors.Join(closeErrors...)
 	}
 
 	deadline := time.NewTimer(maxWaitTime)
@@ -202,14 +231,19 @@ func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 	defer ticker.Stop()
 	for {
 		if databasesClosed(databases) {
-			clearDatabases()
+			gormLifecycleLock.Lock()
+			gormState = gormStopped
+			gormLifecycleLock.Unlock()
 			logger.Logrus().Infoln("Gorm-Starter databases stopped", "databaseTypes", databaseTypes(databases))
 			return true, true, nil
 		}
 		select {
 		case <-deadline.C:
 			logger.Logrus().WithError(ErrGormStopTimeout).Errorln("Gorm-Starter database shutdown timed out")
-			return false, false, ErrGormStopTimeout
+			gormLifecycleLock.Lock()
+			gormState = gormStopped
+			gormLifecycleLock.Unlock()
+			return false, true, ErrGormStopTimeout
 		case <-ticker.C:
 		}
 	}
@@ -255,28 +289,21 @@ func databaseTypes(databases map[DBType]*gorm.DB) string {
 }
 
 func cloneDatabases(databases map[DBType]*gorm.DB) map[DBType]*gorm.DB {
-	result := make(map[DBType]*gorm.DB, len(databases))
-	for dbType, db := range databases {
-		result[dbType] = db
-	}
-	return result
-}
-
-func clearDatabases() {
-	gormDBsLock.Lock()
-	defer gormDBsLock.Unlock()
-	gormDBs = make(map[DBType]*gorm.DB)
-	defaultDBType = ""
+	return coll.MapCollect(databases, func(dbType DBType, db *gorm.DB) (DBType, *gorm.DB) {
+		return dbType, db
+	})
 }
 
 // RawGormDB 获取 gorm.DB 原始能力；不指定 DBType 时优先返回 MySQL
 func RawGormDB(dbType ...DBType) *gorm.DB {
-	gormDBsLock.RLock()
-	defer gormDBsLock.RUnlock()
-	if len(dbType) == 0 {
-		return gormDBs[defaultDBType]
+	runtime := gormRuntimeState.Load()
+	if runtime == nil {
+		return nil
 	}
-	return gormDBs[dbType[0]]
+	if len(dbType) == 0 {
+		return runtime.databases[runtime.defaultDBType]
+	}
+	return runtime.databases[dbType[0]]
 }
 
 // RawMysqlGormDB 获取 MySQL 数据库类型的 gorm.DB
