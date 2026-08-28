@@ -9,7 +9,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type logrusLogger struct{}
+type logrusLogger struct {
+	level log.Level
+}
+
+func effectiveSQLLoggerLevel(level log.Level) log.Level {
+	if level < log.InfoLevel {
+		return log.DebugLevel
+	}
+	return level
+}
 
 func (l *logrusLogger) LogMode(level logger.LogLevel) logger.Interface {
 	return l
@@ -23,21 +32,21 @@ func (l *logrusLogger) Trace(ctx context.Context, begin time.Time, fc func() (sq
 		log.Logrus().WithContext(ctx).Errorln(sql, "rows:", rows, "elapsed:", elapsed, err)
 		return
 	}
-	if log.IsLevelEnabled(sqlLoggerLevel) {
+	if log.IsLevelEnabled(l.level) {
 		elapsed := time.Since(begin)
 		sql, rows := fc()
-		log.Logrus().WithContext(ctx).Logln(logrus.Level(sqlLoggerLevel), sql, "rows:", rows, "elapsed:", elapsed)
+		log.Logrus().WithContext(ctx).Logln(logrus.Level(l.level), sql, "rows:", rows, "elapsed:", elapsed)
 	}
 }
 
-func (l *logrusLogger) Info(ctx context.Context, msg string, data ...interface{}) {
+func (l *logrusLogger) Info(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Infof(msg, data...)
 }
 
-func (l *logrusLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
+func (l *logrusLogger) Warn(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Warnf(msg, data...)
 }
 
-func (l *logrusLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+func (l *logrusLogger) Error(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Errorf(msg, data...)
 }

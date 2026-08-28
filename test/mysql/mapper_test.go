@@ -1,3 +1,5 @@
+//go:build integration
+
 package mysql
 
 import (
@@ -179,7 +181,7 @@ func TestSelectByID(t *testing.T) {
 func TestSelectByIDs(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
-	fmt.Println(bm.SelectByIDs([]interface{}{1, 2}, &teachers))
+	fmt.Println(bm.SelectByIDs([]any{1, 2}, &teachers))
 	fmt.Println(json.ToStringFormat(teachers))
 }
 

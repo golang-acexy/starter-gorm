@@ -94,7 +94,7 @@ type WhereQuery struct {
 	QueryOptions
 }
 
-func (t *Timestamp) Scan(value interface{}) error {
+func (t *Timestamp) Scan(value any) error {
 	if value == nil {
 		*t = Timestamp{Time: time.Time{}}
 		return nil
