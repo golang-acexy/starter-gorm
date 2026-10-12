@@ -19,7 +19,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestRawDBInsert(t *testing.T) {
-	// 分别处于不通的事务中
+	// Use separate transaction handles.
 	stu := &model.Student{Name: "王麻子"}
 	result := gormstarter.RawGormDB().Create(stu)
 	if result.Error != nil {
@@ -33,7 +33,7 @@ func TestRawDBInsert(t *testing.T) {
 		t.Fatal(result.Error)
 	}
 
-	// withContext 分别处于不通的事务中
+	// Use distinct contexts on separate transaction handles.
 	db := gormstarter.RawGormDB().WithContext(context.Background())
 	stu = &model.Student{Name: "王麻子2"}
 	result = db.Create(stu)
@@ -53,7 +53,7 @@ func TestUpdate(t *testing.T) {
 	if result.Error != nil {
 		t.Fatal(result.Error)
 	}
-	result = gormstarter.RawGormDB().Model(model.Student{ID: 1}).Updates(model.Student{ID: 1111, Name: "张三", Sex: 0}) // sex = 0 是零值，不会用于更新
+	result = gormstarter.RawGormDB().Model(model.Student{ID: 1}).Updates(model.Student{ID: 1111, Name: "张三", Sex: 0}) // GORM omits the zero-valued Sex field from this struct update.
 	if result.Error != nil {
 		t.Fatal(result.Error)
 	}

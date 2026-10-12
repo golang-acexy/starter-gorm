@@ -9,7 +9,7 @@
 - `BaseMapper[T]` covers common query, insert, update, delete, count, and pagination operations.
 - `QueryWrapper` builds complex single-table queries without hard-coded column names.
 - `UpdateWrapper` combines reusable conditions with explicit `Set` assignments, including zero and `nil` values.
-- Empty-condition updates and deletes are rejected before reaching GORM.
+- Mutation APIs reject obvious empty filters; GORM remains the final missing-Where safeguard.
 - Transactions preserve the concrete Mapper type.
 - GORM naming strategies, `column` tags, and embedded fields are resolved at execution time.
 
@@ -53,7 +53,7 @@ if err := loader.Start(); err != nil {
 }
 ```
 
-Use `LazyConfig` to resolve configuration immediately before startup. It takes precedence over `Config` when both are present. Stop connections through the parent loader so they participate in the shared shutdown lifecycle.
+Use `LazyConfig` to resolve configuration once on the first `Setting()` or `Start()` call. It takes precedence over `Config` when both are present. Stop connections through the parent loader so they participate in the shared shutdown lifecycle.
 
 ## Configuration
 
@@ -66,7 +66,24 @@ Common `DatabaseConfig` fields:
 | `TimeUTC` | Use UTC for GORM-generated timestamps. |
 | `DryRun` | Generate SQL without executing it. |
 
-MySQL adds `Charset` and `URLParams`; PostgreSQL adds `Timezone` and `SSLMode`. `SQLLoggerLevel` controls SQL logging, and `InitFunc` runs after startup with a snapshot of the initialized database map.
+MySQL adds `Charset` and `URLParams`; PostgreSQL adds `Timezone` and `SSLMode`. `SQLLoggerLevel` controls SQL logging, and `InitFunc` runs through the default parent hook after startup with a copied database map containing shared DB handles. Replacing `GormSetting` replaces that hook too. `DryRun` still opens database connections and performs health checks.
+
+### Connection Pools and Timeouts
+
+`DatabaseConfig` has no `MaxOpenConns`, `MaxIdleConns`, `ConnMaxLifetime`, or `ConnMaxIdleTime` fields. Tune each underlying SQL pool in `InitFunc` or after startup:
+
+```go
+sqlDB, err := gormstarter.RawMysqlGormDB().DB() // Requires successful startup.
+if err != nil {
+    return err
+}
+sqlDB.SetMaxOpenConns(20)
+sqlDB.SetMaxIdleConns(5)
+sqlDB.SetConnMaxLifetime(30 * time.Minute)
+sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+```
+
+These pool settings are separate from MySQL `URLParams` such as `timeout`, `readTimeout`, and `writeTimeout`. PostgreSQL configuration currently has no extra DSN parameter field. Startup health checks use `Ping()` without a starter-specific deadline, so post-start tuning cannot bound startup. Callers must not close shared pools.
 
 Configure both `MySQL` and `Postgres` in the same `GormConfig` when needed. Database routing follows these rules:
 
@@ -140,7 +157,7 @@ total, err := mapper.CountByCond(
 
 Set `QueryOptions.Limit` to a positive value for top-N list queries. Zero leaves the result unrestricted; negative values return `ErrInvalidQueryRange`. Count, single-result, and pagination queries do not apply this limit.
 
-Query structures also provide immutable chain methods for concise construction:
+Query structures provide value-returning chain methods for concise construction. Copied slices do not make referenced values immutable; keep maps, argument values, and time-bound pointers stable during execution:
 
 ```go
 query := gormstarter.NewCondQuery(Teacher{Sex: 1}).
@@ -153,7 +170,7 @@ page := gormstarter.NewPageQuery(Teacher{Sex: 1}, 1, 20).
 	Select("id", "name")
 ```
 
-`Insert` includes zero-value fields. Use `InsertWithoutZeroFields` to omit them, or map and explicit-column APIs when zero values must be controlled precisely.
+`Insert` follows GORM Create semantics, including model defaults. `InsertWithoutZeroFields` selects reflected nonzero fields. `UpdateByID` and `UpdateByCond` omit zero-valued struct updates unless columns are explicitly selected. Use explicit columns, map updates, or Wrapper assignments when writing zero values. Mutation results are driver-reported affected counts, not a portable guarantee of changed-row counts.
 
 ## Type-safe Wrappers
 
@@ -197,7 +214,7 @@ var teachers []*Teacher
 _, err := mapper.SelectByWrapper(query, &teachers)
 ```
 
-Wrapper query APIs include `SelectOneByWrapper`, `SelectByWrapper`, and `CountByWrapper`. Count queries ignore projection, ordering, limit, and offset.
+Wrapper query APIs include `SelectOneByWrapper`, `SelectByWrapper`, and `CountByWrapper`. Count queries ignore projection, ordering, limit, and offset. Wrapper builders mutate their pointer state: use the constructors, avoid concurrent construction, and keep bound values stable. Wrapper `Select` appends fields, unlike query-struct `Select`, which replaces its projection. Wrapper `Limit(0)` requests zero rows; query-struct limit zero means unrestricted.
 
 ### UpdateWrapper
 
@@ -228,6 +245,8 @@ total, err := mapper.SelectPageByWrapper(pageQuery, &records)
 
 `PageWrapper` is an independent pagination type. It reuses query conditions, projection, and ordering, but does not expose `Limit` or `Offset`; ordinary `QueryWrapper` values cannot be passed to `SelectPageByWrapper`.
 
+Count and data are separate statements without an automatic snapshot. A zero count skips the scan and leaves a reused result destination unchanged. Use a fresh destination for each page.
+
 Struct, map, and raw-Where pagination variants are available through `PageQuery`, `MapPageQuery`, and `WherePageQuery`; `SelectPageByGorm` accepts callbacks for fully custom queries. `TimeRanges` adds left-closed, right-open time filters to both count and page queries; either bound may be omitted.
 
 ## Transactions
@@ -240,11 +259,16 @@ func (m TeacherMapper) WithTxMapper(tx *gorm.DB) TeacherMapper {
 }
 ```
 
+Initialize the required database before starting transactions and check the error returned by Begin. `NewBaseMapperWithTx` currently ignores routing errors and can panic if the database is unavailable; it begins an independent transaction rather than nesting an existing one. Passing nil to `GetBaseMapperWithTx` selects normal database routing.
+
 Use the transaction Mapper for every operation in the transaction. The code that starts the transaction owns commit and rollback, and a completed transaction Mapper must not be reused.
 
 ```go
 db := gormstarter.RawMysqlGormDB()
 tx := db.Begin()
+if tx.Error != nil {
+    return tx.Error
+}
 defer tx.Rollback()
 
 txMapper := mapper.WithTxMapper(tx)
@@ -268,21 +292,25 @@ Raw accessors return `nil` when the requested database is unavailable. Mapper op
 
 ## Safety and Errors
 
-- Empty-condition updates and deletes return `ErrEmptyCondition`.
+- Reflected zero struct conditions and empty map conditions return `ErrEmptyCondition`; this does not prove that every accepted condition is selective.
 - Empty Wrapper assignments return `ErrNoFieldToUpdate`.
 - Invalid pagination or Wrapper ranges return `ErrInvalidPage` or `ErrInvalidQueryRange`.
 - Nil entities return `ErrNilEntity`; empty ID batches return `ErrEmptyIDs`.
 - An unavailable starter or database returns `ErrGormStarterNotStarted` or `ErrDatabaseNotRegistered`.
 - Raw Where updates and deletes reject empty expressions with `ErrEmptyWhereSQL`.
 
-GORM's missing-Where protection remains the final safeguard after package-level validation.
+GORM's missing-Where protection remains the final safeguard after package-level validation. Struct conditions omit zero-valued fields; use maps or typed predicates when zero values must participate. Raw SQL filters, ordering, projections, and TimeRange field expressions are trusted application inputs; bind runtime values separately.
+
+`DeleteByID` currently uses GORM's inline-condition shortcut: nonnumeric strings are interpreted as SQL clauses rather than safely bound IDs. For ordinary string keys, use `DeleteByMap(map[string]any{"id": value})` or `DeleteByWhere("id = ?", value)`. Model soft-delete behavior applies to the delete APIs.
 
 ## Design Notes
 
-- Runtime database instances are published as one immutable atomic snapshot and managed by one starter lifecycle; raw accessors do not hold lifecycle locks.
+- DB handles are shared and lifecycle-managed; keep configuration fixed after resolution, finish database work before shutdown, and avoid sharing mutable chained sessions or result buffers.
 - `BaseMapper` is a value type; transaction helpers return a new Mapper.
 - MySQL and PostgreSQL start and stop together when both are configured.
-- `Timestamp` supports SQL scanning, driver values, and shared JSON timestamp conversion.
+- `Timestamp` scans SQL `time.Time` or null, writes zero time as SQL null, and uses toolkit global JSON timestamp units. Zero time encodes as JSON numeric zero; numeric zero decodes to the Unix epoch, while null resets Go zero time.
+- Startup and Mapper operations have no automatic application deadline or request-context propagation; use native `WithContext` sessions when cancellation is required.
+- Shutdown `maxWaitTime` bounds post-close polling only; synchronous pool Close calls occur before its timer starts.
 - A successfully stopped GORM starter is not restartable through the parent lifecycle.
 
 ## Testing

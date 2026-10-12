@@ -35,40 +35,65 @@ const (
 	gormStopping
 )
 
+// DatabaseConfig selects a connection target and GORM behavior; it exposes no SQL pool limits or health-check deadline.
 type DatabaseConfig struct {
+	// Username is the driver connection username.
 	Username string
+	// Password is the driver connection password; keep it private.
 	Password string
+	// Host is the TCP database hostname or address.
 	Host     string
+	// Port is the TCP database port; no starter default is supplied.
 	Port     uint
+	// Database is the target database name.
 	Database string
-	TimeUTC  bool // 是否使用 UTC 时间生成创建和更新时间
-	DryRun   bool // 是否只生成 SQL 而不执行
+	// TimeUTC uses UTC for GORM-generated timestamps, not the connection session timezone.
+	TimeUTC  bool
+	// DryRun generates SQL without executing operations; startup still opens and checks the connection.
+	DryRun   bool
 }
 
+// MySQLConfig extends common settings with charset and MySQL driver DSN parameters.
 type MySQLConfig struct {
+	// DatabaseConfig supplies the common connection settings.
 	DatabaseConfig
-	Charset   string // 字符集，默认为 utf8mb4
-	URLParams string // 额外连接参数，例如 `allowNativePasswords=false&checkConnLiveness=false`
+	// Charset defaults to utf8mb4 when empty.
+	Charset   string
+	// URLParams supplies MySQL driver DSN options; parseTime and charset cannot override starter settings.
+	URLParams string
 }
 
+// PostgresConfig extends common settings with server timezone and SSL mode.
 type PostgresConfig struct {
+	// DatabaseConfig supplies the common connection settings.
 	DatabaseConfig
+	// Timezone sets the PostgreSQL session timezone; empty defaults to UTC.
 	Timezone string
-	SSLMode  string // SSL 模式，例如 disable、require、verify-ca 或 verify-full
+	// SSLMode sets PostgreSQL SSL behavior; empty defaults to disable.
+	SSLMode  string
 }
 
+// GormConfig initializes MySQL, PostgreSQL, or both; keep configuration fixed before first resolution.
 type GormConfig struct {
-	SQLLoggerLevel logger.Level // 全局 SQL 日志级别，默认为 DebugLevel
+	// SQLLoggerLevel selects trace logging; values below InfoLevel use DebugLevel.
+	SQLLoggerLevel logger.Level
+	// MySQL configures MySQL when nonnil.
 	MySQL          *MySQLConfig
+	// Postgres configures PostgreSQL when nonnil.
 	Postgres       *PostgresConfig
+	// InitFunc receives shared DB handles through the default parent hook after startup; pool tuning happens after connection checks.
 	InitFunc       func(databases map[DBType]*gorm.DB)
 }
 
+// GormStarter owns the process-wide database registry; concurrent configuration mutation is unsupported.
 type GormStarter struct {
+	// Config supplies static settings when LazyConfig is nil.
 	Config      GormConfig
+	// LazyConfig takes precedence and is evaluated once on first Setting or Start resolution.
 	LazyConfig  func() GormConfig
 	config      *GormConfig
 	configOnce  sync.Once
+	// GormSetting replaces the default lifecycle setting, including its InitFunc hook.
 	GormSetting *parent.Setting
 }
 
@@ -91,6 +116,7 @@ func (g *GormStarter) getConfig() *GormConfig {
 	return g.config
 }
 
+// Setting returns a custom setting or resolves configuration for the default parent setting and post-start InitFunc hook.
 func (g *GormStarter) Setting() *parent.Setting {
 	if g.GormSetting != nil {
 		return g.GormSetting
@@ -103,6 +129,9 @@ func (g *GormStarter) Setting() *parent.Setting {
 	})
 }
 
+// Start initializes configured dialects and checks their SQL pools before publishing shared handles.
+// The returned map is a copy, but DB handles are shared; overlapping lifecycle transitions are rejected.
+// Connection health checks have no starter-supplied deadline; DryRun still requires initialization.
 func (g *GormStarter) Start() (any, error) {
 	config := g.getConfig()
 	if config.MySQL == nil && config.Postgres == nil {
@@ -192,6 +221,9 @@ func (g *GormStarter) openDatabase(dbType DBType, config DatabaseConfig, open fu
 	return db, nil
 }
 
+// Stop withdraws the runtime, closes pools, then polls for drained connections.
+// maxWaitTime bounds only post-close polling; SQL Close calls occur before the timer starts.
+// Close errors or polling timeout report nongraceful completion with runtime still withdrawn.
 func (g *GormStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
 	gormLifecycleLock.Lock()
 	runtime := gormRuntimeState.Load()
@@ -294,7 +326,8 @@ func cloneDatabases(databases map[DBType]*gorm.DB) map[DBType]*gorm.DB {
 	})
 }
 
-// RawGormDB 获取 gorm.DB 原始能力；不指定 DBType 时优先返回 MySQL
+// RawGormDB returns a borrowed DB, or nil when unavailable. Only the first optional dialect is used.
+// Without an argument it prefers MySQL, otherwise PostgreSQL; callers must not close the shared pool.
 func RawGormDB(dbType ...DBType) *gorm.DB {
 	runtime := gormRuntimeState.Load()
 	if runtime == nil {
@@ -306,8 +339,8 @@ func RawGormDB(dbType ...DBType) *gorm.DB {
 	return runtime.databases[dbType[0]]
 }
 
-// RawMysqlGormDB 获取 MySQL 数据库类型的 gorm.DB
+// RawMysqlGormDB returns the borrowed MySQL DB, or nil when unavailable.
 func RawMysqlGormDB() *gorm.DB { return RawGormDB(DBTypeMySQL) }
 
-// RawPostgresGormDB 获取 PostgreSQL 数据库类型的 gorm.DB
+// RawPostgresGormDB returns the borrowed PostgreSQL DB, or nil when unavailable.
 func RawPostgresGormDB() *gorm.DB { return RawGormDB(DBTypePostgres) }

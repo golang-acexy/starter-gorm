@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Teacher 在 Wrapper 测试包中独立定义，避免依赖公共测试 Model。
+// Teacher is a wrapper-test model independent of the shared test model.
 type Teacher struct {
 	ID        uint64                `gorm:"<-:false;primaryKey"`
 	CreatedAt gormstarter.Timestamp `gorm:"column:create_time;<-:false"`
@@ -51,7 +51,7 @@ var teacherColumns = TeacherColumns{
 	Ignored:   gormstarter.NewColumn(func(teacher *Teacher) *string { return &teacher.Ignored }),
 }
 
-// Columns 返回当前 Mapper 对应的只读字段元数据。
+// Columns returns the mapper field metadata; callers must keep it immutable.
 func (TeacherMapper) Columns() *TeacherColumns {
 	return &teacherColumns
 }

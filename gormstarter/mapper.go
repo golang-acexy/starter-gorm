@@ -47,7 +47,7 @@ func checkResult(rs *gorm.DB) (int64, error) {
 	return rs.RowsAffected, nil
 }
 
-// validateStructCondition 防止结构体零值条件退化为全表更新或删除。
+// validateStructCondition rejects reflected zero values, not every condition that GORM could omit.
 func validateStructCondition[T any](condition T) error {
 	if stdreflect.ValueOf(condition).IsZero() {
 		return ErrEmptyCondition
@@ -55,7 +55,7 @@ func validateStructCondition[T any](condition T) error {
 	return nil
 }
 
-// validateID 防止空主键进入查询、更新或删除操作。
+// validateID rejects nil, typed nil, and reflected zero IDs; it does not sanitize GORM string conditions.
 func validateID(id any) error {
 	if id == nil {
 		return ErrEmptyID
@@ -73,7 +73,7 @@ func validateID(id any) error {
 	return nil
 }
 
-// effectiveUpdateFields 收集实际可更新字段，主键 ID 不单独视为更新内容。
+// effectiveUpdateFields collects reflected nonzero and explicit fields, excluding ID as the sole payload.
 func effectiveUpdateFields[T any](updated *T, explicitColumns ...string) ([]string, error) {
 	if updated == nil {
 		return nil, ErrNilEntity
@@ -93,19 +93,19 @@ func effectiveUpdateFields[T any](updated *T, explicitColumns ...string) ([]stri
 	return fields, nil
 }
 
-// TableGormDB 获取已限定当前 Mapper 表名的原生 gorm.DB。
+// TableGormDB returns a table-scoped handle, or nil on routing failure; caller must not close the shared pool.
 func (b BaseMapper[T]) TableGormDB() *gorm.DB {
 	db, _ := b.tableDB()
 	return db
 }
 
-// CurrentGormDB 获取当前 Mapper 使用的 gorm.DB；绑定事务时返回该事务，否则返回新的 gorm.DB。
+// CurrentGormDB returns the bound transaction or shared routed DB, not a new isolated session; errors become nil.
 func (b BaseMapper[T]) CurrentGormDB() *gorm.DB {
 	db, _ := b.rawDB()
 	return db
 }
 
-// GetBaseMapperWithTx 获取绑定指定事务的基础 Mapper
+// GetBaseMapperWithTx returns a mapper copy borrowing tx; nil selects ordinary routing. Caller owns commit/rollback.
 func (b BaseMapper[T]) GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T] {
 	return BaseMapper[T]{
 		model: b.model,
@@ -113,22 +113,24 @@ func (b BaseMapper[T]) GetBaseMapperWithTx(tx *gorm.DB) BaseMapper[T] {
 	}
 }
 
-// Wrapper 创建与当前 Mapper 模型类型绑定的查询 Wrapper。
+// Wrapper creates a mutable query builder; do not construct or mutate it concurrently.
 func (b BaseMapper[T]) Wrapper() *QueryWrapper[T] {
 	return NewQueryWrapper[T]()
 }
 
-// PageWrapper 创建与当前 Mapper 模型类型绑定的分页查询 Wrapper。
+// PageWrapper creates a mutable page builder; positive page inputs are validated at execution.
 func (b BaseMapper[T]) PageWrapper(number, size int) *PageWrapper[T] {
 	return newPageWrapper[T](number, size)
 }
 
-// UpdateWrapper 创建与当前 Mapper 模型类型绑定的更新 Wrapper。
+// UpdateWrapper creates a mutable update builder requiring predicates and assignments at execution.
 func (b BaseMapper[T]) UpdateWrapper() *UpdateWrapper[T] {
 	return newUpdateWrapper[T]()
 }
 
-// NewBaseMapperWithTx 创建一个全新事务的基础 Mapper
+// NewBaseMapperWithTx begins an independent transaction on the routed database; caller owns commit/rollback.
+// Routing errors are currently ignored and can cause a nil-pointer panic. Check availability first
+// and inspect the returned CurrentGormDB().Error for Begin failures; this does not create a nested transaction.
 func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T] {
 	baseMapper := BaseMapper[T]{
 		model: b.model,
@@ -138,7 +140,7 @@ func (b BaseMapper[T]) NewBaseMapperWithTx(opts ...*sql.TxOptions) BaseMapper[T]
 	return baseMapper
 }
 
-// SelectByID 通过主键查询数据
+// SelectByID binds the ID to column id and scans into a nonnil destination; no match returns zero rows.
 func (b BaseMapper[T]) SelectByID(id any, result *T) (int64, error) {
 	if err := validateID(id); err != nil {
 		return 0, err
@@ -150,7 +152,7 @@ func (b BaseMapper[T]) SelectByID(id any, result *T) (int64, error) {
 	return checkResult(db.Where("id = ?", id).Scan(result))
 }
 
-// SelectByIDs 通过主键查询数据
+// SelectByIDs binds an ID batch to column id; an empty batch is rejected and results are not ordered by input IDs.
 func (b BaseMapper[T]) SelectByIDs(ids []any, result *[]*T) (int64, error) {
 	if len(ids) == 0 {
 		return 0, ErrEmptyIDs
@@ -162,7 +164,7 @@ func (b BaseMapper[T]) SelectByIDs(ids []any, result *[]*T) (int64, error) {
 	return checkResult(db.Where("id in ?", ids).Scan(result))
 }
 
-// ExistsByID 判断指定主键的数据是否存在
+// ExistsByID counts column-id matches; empty IDs are rejected and driver errors are propagated.
 func (b BaseMapper[T]) ExistsByID(id any) (bool, error) {
 	if err := validateID(id); err != nil {
 		return false, err
@@ -178,8 +180,7 @@ func (b BaseMapper[T]) ExistsByID(id any) (bool, error) {
 	return count > 0, nil
 }
 
-// SelectOneByCond 通过条件查询 查询条件零值字段将被自动忽略
-// specifyColumns 指定只需要查询的数据库字段
+// SelectOneByCond scans at most one match; GORM omits zero-valued struct condition fields.
 func (b BaseMapper[T]) SelectOneByCond(query CondQuery[T], result *T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -189,8 +190,7 @@ func (b BaseMapper[T]) SelectOneByCond(query CondQuery[T], result *T) (int64, er
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(1).Scan(result))
 }
 
-// SelectOneByMap 通过指定字段与值查询数据 解决查询条件零值问题
-// specifyColumns 指定只需要查询的数据库字段
+// SelectOneByMap scans at most one match using explicit map predicates, including zero values.
 func (b BaseMapper[T]) SelectOneByMap(query MapQuery, result *T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -200,7 +200,8 @@ func (b BaseMapper[T]) SelectOneByMap(query MapQuery, result *T) (int64, error) 
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Limit(1).Scan(result))
 }
 
-// SelectOneByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
+// SelectOneByWhere scans a trusted SQL filter without adding LIMIT 1 and warns if multiple rows are scanned.
+// Callers own cardinality and must bind runtime values through Args.
 func (b BaseMapper[T]) SelectOneByWhere(query WhereQuery, result *T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -212,7 +213,7 @@ func (b BaseMapper[T]) SelectOneByWhere(query WhereQuery, result *T) (int64, err
 		return 0, err
 	}
 	if rowsAffected > 1 {
-		// 原始 SQL 的限制条件由调用方负责；返回多行时提示单条查询语义可能不明确。
+		// The caller owns raw SQL cardinality; warn when a single-result request scans multiple rows.
 		logger.Logrus().WithFields(map[string]any{
 			"table":        b.model.TableName(),
 			"rowsAffected": rowsAffected,
@@ -221,7 +222,7 @@ func (b BaseMapper[T]) SelectOneByWhere(query WhereQuery, result *T) (int64, err
 	return rowsAffected, nil
 }
 
-// SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
+// SelectOneByGorm invokes a nonnil callback on the table-scoped DB, then scans; the callback owns cardinality.
 func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -231,8 +232,7 @@ func (b BaseMapper[T]) SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, 
 	return checkResult(db.Scan(result))
 }
 
-// SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
-// specifyColumns 指定只需要查询的数据库字段
+// SelectByCond scans struct-filter matches; zero condition fields are omitted and zero Limit is unrestricted.
 func (b BaseMapper[T]) SelectByCond(query CondQuery[T], result *[]*T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -246,8 +246,7 @@ func (b BaseMapper[T]) SelectByCond(query CondQuery[T], result *[]*T) (int64, er
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Scan(result))
 }
 
-// SelectByMap 通过指定字段与值查询数据 解决零值条件问题
-// specifyColumns 指定只需要查询的数据库字段
+// SelectByMap scans map-filter matches, preserving zero predicates; negative Limit is rejected.
 func (b BaseMapper[T]) SelectByMap(query MapQuery, result *[]*T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -261,7 +260,7 @@ func (b BaseMapper[T]) SelectByMap(query MapQuery, result *[]*T) (int64, error) 
 	return checkResult(db.Select(query.SelectColumns).Where(query.Condition).Order(query.OrderBySQL).Scan(result))
 }
 
-// SelectByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
+// SelectByWhere scans a trusted SQL filter with bound Args; negative Limit is rejected.
 func (b BaseMapper[T]) SelectByWhere(query WhereQuery, result *[]*T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -275,7 +274,7 @@ func (b BaseMapper[T]) SelectByWhere(query WhereQuery, result *[]*T) (int64, err
 	return checkResult(db.Select(query.SelectColumns).Where(query.RawWhereSQL, query.Args...).Order(query.OrderBySQL).Scan(result))
 }
 
-// SelectByGorm 通过原始Gorm查询数据
+// SelectByGorm invokes a nonnil callback on the table-scoped DB and scans into the caller-owned slice.
 func (b BaseMapper[T]) SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -285,7 +284,7 @@ func (b BaseMapper[T]) SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, 
 	return checkResult(db.Scan(result))
 }
 
-// SelectOneByWrapper 使用类型安全的 Wrapper 查询一条数据。
+// SelectOneByWrapper scans at most one match; wrapper Limit and Offset are not applied.
 func (b BaseMapper[T]) SelectOneByWrapper(query *QueryWrapper[T], result *T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -298,7 +297,7 @@ func (b BaseMapper[T]) SelectOneByWrapper(query *QueryWrapper[T], result *T) (in
 	return checkResult(db.Limit(1).Scan(result))
 }
 
-// SelectByWrapper 使用类型安全的 Wrapper 查询数据。
+// SelectByWrapper scans wrapper matches with projection, ordering, and validated range settings.
 func (b BaseMapper[T]) SelectByWrapper(query *QueryWrapper[T], result *[]*T) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -311,7 +310,7 @@ func (b BaseMapper[T]) SelectByWrapper(query *QueryWrapper[T], result *[]*T) (in
 	return checkResult(db.Scan(result))
 }
 
-// CountByCond 通过实体条件统计数据，条件中的零值字段将被自动忽略。
+// CountByCond applies struct predicates and time ranges; zero fields are omitted and projection/order/Limit are ignored.
 func (b BaseMapper[T]) CountByCond(query CondQuery[T]) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
@@ -323,7 +322,7 @@ func (b BaseMapper[T]) CountByCond(query CondQuery[T]) (int64, error) {
 	return count, err
 }
 
-// CountByMap 通过 Map 条件统计数据，支持显式零值条件。
+// CountByMap applies map predicates and time ranges; projection/order/Limit are ignored.
 func (b BaseMapper[T]) CountByMap(query MapQuery) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
@@ -335,7 +334,7 @@ func (b BaseMapper[T]) CountByMap(query MapQuery) (int64, error) {
 	return count, err
 }
 
-// CountByWhere 通过原始 SQL 条件统计数据。
+// CountByWhere counts a trusted SQL filter with bound Args and time ranges, ignoring projection/order/Limit.
 func (b BaseMapper[T]) CountByWhere(query WhereQuery) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
@@ -347,7 +346,7 @@ func (b BaseMapper[T]) CountByWhere(query WhereQuery) (int64, error) {
 	return count, err
 }
 
-// CountByGorm 通过原始Gorm查询数据总数
+// CountByGorm invokes a nonnil callback on the table-scoped DB; the callback owns count filters.
 func (b BaseMapper[T]) CountByGorm(rawDB func(*gorm.DB)) (int64, error) {
 	var count int64
 	db, err := b.tableDB()
@@ -359,7 +358,7 @@ func (b BaseMapper[T]) CountByGorm(rawDB func(*gorm.DB)) (int64, error) {
 	return count, err
 }
 
-// CountByWrapper 使用 Wrapper 条件统计数据总数。
+// CountByWrapper counts wrapper predicates while ignoring projection, order, Limit, and Offset.
 func (b BaseMapper[T]) CountByWrapper(query *QueryWrapper[T]) (int64, error) {
 	db, err := b.tableDB()
 	if err != nil {
@@ -374,8 +373,7 @@ func (b BaseMapper[T]) CountByWrapper(query *QueryWrapper[T]) (int64, error) {
 	return count, err
 }
 
-// applyTimeRanges 将 TimeRanges 批量应用到 gorm.DB 的 WHERE 条件中
-// 使用左闭右开区间 [StartTime, EndTime)，EndTime 为 nil 时无上界
+// applyTimeRanges uses trusted field expressions and bound values with inclusive starts and exclusive ends.
 func applyTimeRanges(db *gorm.DB, ranges []TimeRange) *gorm.DB {
 	for _, tr := range ranges {
 		if tr.StartTime != nil && tr.EndTime != nil {
@@ -399,7 +397,7 @@ func applyQueryLimit(db *gorm.DB, limit int) (*gorm.DB, error) {
 	return db, nil
 }
 
-// pageOffset 在执行查询前校验分页参数并避免整数乘法溢出。
+// pageOffset rejects nonpositive page inputs and integer multiplication overflow.
 func pageOffset(number, size int) (int, error) {
 	if number <= 0 || size <= 0 {
 		return 0, ErrInvalidPage
@@ -410,7 +408,8 @@ func pageOffset(number, size int) (int, error) {
 	return (number - 1) * size, nil
 }
 
-// SelectPageByCond 通过实体条件分页查询，条件中的零值字段将被自动忽略。
+// SelectPageByCond counts then scans a struct-filter page; positive page inputs are required and zero fields are omitted.
+// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 func (b BaseMapper[T]) SelectPageByCond(query PageQuery[T], result *[]*T) (total int64, err error) {
 	offset, err := pageOffset(query.Number, query.Size)
 	if err != nil {
@@ -440,7 +439,8 @@ func (b BaseMapper[T]) SelectPageByCond(query PageQuery[T], result *[]*T) (total
 	return total, nil
 }
 
-// SelectPageByMap 通过 Map 条件分页查询，支持显式查询零值字段。
+// SelectPageByMap counts then scans a map-filter page; positive page inputs are required.
+// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 func (b BaseMapper[T]) SelectPageByMap(query MapPageQuery, result *[]*T) (total int64, err error) {
 	offset, err := pageOffset(query.Number, query.Size)
 	if err != nil {
@@ -470,7 +470,8 @@ func (b BaseMapper[T]) SelectPageByMap(query MapPageQuery, result *[]*T) (total 
 	return total, nil
 }
 
-// SelectPageByWhere 通过原始 SQL 分页查询
+// SelectPageByWhere counts then scans a trusted SQL-filter page using bound Args and positive page inputs.
+// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 func (b BaseMapper[T]) SelectPageByWhere(query WherePageQuery, result *[]*T) (total int64, err error) {
 	offset, err := pageOffset(query.Number, query.Size)
 	if err != nil {
@@ -500,7 +501,8 @@ func (b BaseMapper[T]) SelectPageByWhere(query WherePageQuery, result *[]*T) (to
 	return total, nil
 }
 
-// SelectPageByGorm 通过原始Gorm分页查询
+// SelectPageByGorm invokes nonnil count/data callbacks separately; callers supply matching filters and pagination.
+// Zero count skips the data callback and leaves the result destination untouched.
 func (b BaseMapper[T]) SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB func(*gorm.DB), result *[]*T) (total int64, err error) {
 	countDB, err := b.tableDB()
 	if err != nil {
@@ -526,7 +528,8 @@ func (b BaseMapper[T]) SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB fun
 	return total, nil
 }
 
-// SelectPageByWrapper 使用 Wrapper 条件分页查询。
+// SelectPageByWrapper counts then scans a page wrapper; nil wrappers and invalid page inputs are rejected.
+// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 func (b BaseMapper[T]) SelectPageByWrapper(query *PageWrapper[T], result *[]*T) (total int64, err error) {
 	if query == nil {
 		return 0, ErrNilQueryWrapper
@@ -558,9 +561,7 @@ func (b BaseMapper[T]) SelectPageByWrapper(query *PageWrapper[T], result *[]*T) 
 	return total, err
 }
 
-// Insert 保存数据 零值也将参与保存
-//
-//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
+// Insert applies GORM Create to a nonnil entity; excluded columns are omitted and model defaults follow GORM semantics.
 func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error) {
 	if entity == nil {
 		return 0, ErrNilEntity
@@ -575,7 +576,7 @@ func (b BaseMapper[T]) Insert(entity *T, excludeColumns ...string) (int64, error
 	return checkResult(db.Create(entity))
 }
 
-// InsertWithoutZeroFields 保存数据 零值字段将不会参与保存
+// InsertWithoutZeroFields selects reflected nonzero Go fields; nil or empty effective data is rejected.
 func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
 	if entity == nil {
 		return 0, ErrNilEntity
@@ -601,9 +602,7 @@ func (b BaseMapper[T]) InsertWithoutZeroFields(entity *T) (int64, error) {
 	}
 }
 
-// InsertBatch 批量新增 零值也将参与保存
-//
-//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
+// InsertBatch applies GORM Create to a nonempty batch of nonnil entities; excluded columns are omitted.
 func (b BaseMapper[T]) InsertBatch(entities []*T, excludeColumns ...string) (int64, error) {
 	if len(entities) == 0 {
 		return 0, ErrNoFieldToSave
@@ -623,7 +622,7 @@ func (b BaseMapper[T]) InsertBatch(entities []*T, excludeColumns ...string) (int
 	return checkResult(db.Create(entities))
 }
 
-// InsertWithMap 通过 Map 类型保存数据
+// InsertWithMap creates an explicit nonempty column/value map without model-field zero omission.
 func (b BaseMapper[T]) InsertWithMap(entity map[string]any) (int64, error) {
 	if len(entity) == 0 {
 		return 0, ErrNoFieldToSave
@@ -635,9 +634,8 @@ func (b BaseMapper[T]) InsertWithMap(entity map[string]any) (int64, error) {
 	return checkResult(db.Create(entity))
 }
 
-// InsertOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
-// exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
-// 仅根据主键冲突默认支持update 更多操作需要参阅 https://gorm.io/zh_CN/docs/create.html#upsert
+// InsertOrUpdateByPrimaryKey delegates to GORM Save, not an arbitrary conflict-target upsert.
+// Excluded columns are omitted; full-field updates can overwrite creation timestamps unless excluded.
 func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error) {
 	if entity == nil {
 		return 0, ErrNilEntity
@@ -652,8 +650,8 @@ func (b BaseMapper[T]) InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...s
 	return checkResult(db.Save(entity))
 }
 
-// UpdateByID 通过实体中的主键 ID 更新含零值字段
-// updateColumns 手动指定需要更新的列
+// UpdateByID updates column-id matches; without selected columns GORM omits zero-valued struct updates.
+// Explicitly selected columns include zero values. Empty IDs or effective update data are rejected.
 func (b BaseMapper[T]) UpdateByID(updated *T, id any, updateColumns ...string) (int64, error) {
 	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil {
 		return 0, err
@@ -668,8 +666,7 @@ func (b BaseMapper[T]) UpdateByID(updated *T, id any, updateColumns ...string) (
 	return checkResult(db.Select(updateColumns).Where("id = ?", id).Updates(updated))
 }
 
-// UpdateByIDWithoutZeroFields 通过ID更新非零值字段
-// allowZeroFieldColumns 额外指定需要更新零值字段
+// UpdateByIDWithoutZeroFields selects nonzero fields plus allowZeroFieldColumns; the ID itself is not sufficient update data.
 func (b BaseMapper[T]) UpdateByIDWithoutZeroFields(updated *T, id any, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
 	if err != nil {
@@ -685,7 +682,7 @@ func (b BaseMapper[T]) UpdateByIDWithoutZeroFields(updated *T, id any, allowZero
 	return checkResult(db.Select(nonZeroFields).Where("id = ?", id).Updates(updated))
 }
 
-// UpdateByIDWithMap 通过 ID 更新 Map 中指定的列和值
+// UpdateByIDWithMap applies explicit nonempty map values, including zero/nil, to a validated column-id match.
 func (b BaseMapper[T]) UpdateByIDWithMap(updated map[string]any, id any) (int64, error) {
 	if len(updated) == 0 {
 		return 0, ErrNoFieldToUpdate
@@ -700,8 +697,7 @@ func (b BaseMapper[T]) UpdateByIDWithMap(updated map[string]any, id any) (int64,
 	return checkResult(db.Where("id = ?", id).Updates(updated))
 }
 
-// UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
-// updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
+// UpdateByCond omits zero struct predicates and, unless columns are selected, zero struct update values.
 func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error) {
 	if _, err := effectiveUpdateFields(updated, updateColumns...); err != nil {
 		return 0, err
@@ -716,7 +712,7 @@ func (b BaseMapper[T]) UpdateByCond(updated *T, condition T, updateColumns ...st
 	return checkResult(db.Select(updateColumns).Where(condition).Updates(updated))
 }
 
-// UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
+// UpdateByCondWithZeroFields omits zero struct predicates and selects nonzero updates plus allowZeroFieldColumns.
 func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error) {
 	nonZeroFields, err := effectiveUpdateFields(updated, allowZeroFieldColumns...)
 	if err != nil {
@@ -732,7 +728,7 @@ func (b BaseMapper[T]) UpdateByCondWithZeroFields(updated *T, condition T, allow
 	return checkResult(db.Select(nonZeroFields).Where(condition).Updates(updated))
 }
 
-// UpdateByMap 通过Map类型条件更新
+// UpdateByMap requires nonempty predicate and update maps and preserves explicit zero/nil values.
 func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, error) {
 	if len(updated) == 0 {
 		return 0, ErrNoFieldToUpdate
@@ -747,7 +743,7 @@ func (b BaseMapper[T]) UpdateByMap(updated, condition map[string]any) (int64, er
 	return checkResult(db.Where(condition).Updates(updated))
 }
 
-// UpdateByWhere 通过原始 Where SQL 条件更新非零实体字段
+// UpdateByWhere requires trusted nonblank SQL with bound args and nonempty effective struct update data.
 func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSQL string, args ...any) (int64, error) {
 	if _, err := effectiveUpdateFields(updated); err != nil {
 		return 0, err
@@ -762,7 +758,7 @@ func (b BaseMapper[T]) UpdateByWhere(updated *T, rawWhereSQL string, args ...any
 	return checkResult(db.Where(rawWhereSQL, args...).Updates(updated))
 }
 
-// UpdateByWrapper 使用 Wrapper 条件和 Set 赋值更新数据。
+// UpdateByWrapper requires predicates and assignments; zero/nil assignments are kept and the last repeated field wins.
 func (b BaseMapper[T]) UpdateByWrapper(wrapper *UpdateWrapper[T]) (int64, error) {
 	if wrapper == nil {
 		return 0, ErrNilUpdateWrapper
@@ -795,7 +791,9 @@ func (b BaseMapper[T]) UpdateByWrapper(wrapper *UpdateWrapper[T]) (int64, error)
 	return checkResult(db.Updates(updates))
 }
 
-// DeleteByID 通过 ID 删除单条数据
+// DeleteByID delegates ID conditions to GORM Delete and follows model soft-delete behavior.
+// Nonnumeric strings are interpreted as SQL clauses, not bound IDs; do not pass arbitrary string IDs.
+// Use a bound Where/Map filter for ordinary string keys until this shortcut is changed.
 func (b BaseMapper[T]) DeleteByID(id any) (int64, error) {
 	if err := validateID(id); err != nil {
 		return 0, err
@@ -807,7 +805,7 @@ func (b BaseMapper[T]) DeleteByID(id any) (int64, error) {
 	return checkResult(db.Delete(b.model, id))
 }
 
-// DeleteByIDs 通过多个 ID 删除数据
+// DeleteByIDs delegates a nonempty ID batch to GORM Delete; individual IDs are not validated and soft deletion follows the model.
 func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
 	if len(ids) == 0 {
 		return 0, ErrEmptyIDs
@@ -819,7 +817,7 @@ func (b BaseMapper[T]) DeleteByIDs(ids []any) (int64, error) {
 	return checkResult(db.Delete(b.model, ids))
 }
 
-// DeleteByCond 通过条件删除 零值字段将被自动忽略
+// DeleteByCond rejects a reflected zero condition; GORM omits zero-valued struct predicates and applies model soft deletion.
 func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
 	if err := validateStructCondition(condition); err != nil {
 		return 0, err
@@ -831,7 +829,7 @@ func (b BaseMapper[T]) DeleteByCond(condition T) (int64, error) {
 	return checkResult(db.Where(condition).Delete(b.model))
 }
 
-// DeleteByWhere 通过原始 Where SQL 删除相关数据
+// DeleteByWhere requires a trusted nonblank SQL filter with bound args and follows model soft deletion.
 func (b BaseMapper[T]) DeleteByWhere(rawWhereSQL string, args ...any) (int64, error) {
 	if strings.TrimSpace(rawWhereSQL) == "" {
 		return 0, ErrEmptyWhereSQL
@@ -843,7 +841,7 @@ func (b BaseMapper[T]) DeleteByWhere(rawWhereSQL string, args ...any) (int64, er
 	return checkResult(db.Where(rawWhereSQL, args...).Delete(b.model))
 }
 
-// DeleteByMap 通过Map类型条件删除
+// DeleteByMap requires a nonempty predicate map and follows model soft deletion.
 func (b BaseMapper[T]) DeleteByMap(condition map[string]any) (int64, error) {
 	if len(condition) == 0 {
 		return 0, ErrEmptyCondition

@@ -41,17 +41,17 @@ func TestInsertVariants(t *testing.T) {
 	fmt.Println(bm.InsertWithoutZeroFields(&teacher))
 	fmt.Println("saved id", teacher.ID)
 
-	// 测试自动保存0值
+	// Demonstrate zero-valued insert fields.
 	teacher1 := model.Teacher{Sex: 1}
 	fmt.Println(bm.Insert(&teacher1))
 	fmt.Println("saved id", teacher1.ID)
 
-	// 测试排除指定的字段
+	// Demonstrate omitted insert fields.
 	teacher3 := model.Teacher{Sex: 1}
 	fmt.Println(bm.Insert(&teacher3, "name"))
 	fmt.Println("saved id", teacher3.ID)
 
-	// 测试主键冲突
+	// Demonstrate a primary-key conflict.
 	teacher4 := model.Teacher{
 		Sex: 1,
 	}
@@ -81,9 +81,9 @@ func TestUpdateByID(t *testing.T) {
 	updated := model.Teacher{Name: "update", Age: 21, Sex: 0}
 
 	updated.ID = 47
-	// 由于sex是零值并不会被用于更新的指定
+	// GORM omits the zero-valued Sex field unless explicitly selected.
 	fmt.Println(bm.UpdateByID(&updated, updated.ID))
-	// 通过指定字段更新 可以指定零值
+	// Explicit field selection permits zero-valued updates.
 	fmt.Println(bm.UpdateByID(&updated, updated.ID, "sex", "name", "age"))
 
 	fmt.Println(bm.UpdateByIDWithoutZeroFields(&updated, updated.ID, "sex"))
@@ -216,7 +216,7 @@ func TestExistsByID(t *testing.T) {
 func TestSelectByCond(t *testing.T) {
 	bm := model.TeacherMapper{}
 	var teachers []*model.Teacher
-	// 由于Age是零值，不会用于查询
+	// GORM omits the zero-valued Age predicate.
 	//bm.SelectByCond(&Teacher{Sex: 1, Age: 0}, &teachers, "age")
 	bm.SelectByCond(gormstarter.CondQuery[model.Teacher]{Condition: model.Teacher{Sex: 1, Age: 0}, QueryOptions: gormstarter.QueryOptions{OrderBySQL: "id desc"}}, &teachers)
 	fmt.Println(json.ToStringFormat(teachers))
