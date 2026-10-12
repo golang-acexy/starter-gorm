@@ -2,6 +2,7 @@ package gormstarter
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,9 +17,9 @@ import (
 const defaultCharset = "utf8mb4"
 
 var (
-	gormRuntimeState atomic.Pointer[gormRuntime]
+	gormRuntimeState  atomic.Pointer[gormRuntime]
 	gormLifecycleLock sync.Mutex
-	gormState gormLifecycleState
+	gormState         gormLifecycleState
 )
 
 type gormRuntime struct {
@@ -35,22 +36,24 @@ const (
 	gormStopping
 )
 
-// DatabaseConfig selects a connection target and GORM behavior; it exposes no SQL pool limits or health-check deadline.
+// DatabaseConfig selects a connection target, SQL pool settings, and GORM behavior.
 type DatabaseConfig struct {
 	// Username is the driver connection username.
 	Username string
 	// Password is the driver connection password; keep it private.
 	Password string
 	// Host is the TCP database hostname or address.
-	Host     string
+	Host string
 	// Port is the TCP database port; no starter default is supplied.
-	Port     uint
+	Port uint
 	// Database is the target database name.
 	Database string
 	// TimeUTC uses UTC for GORM-generated timestamps, not the connection session timezone.
-	TimeUTC  bool
+	TimeUTC bool
 	// DryRun generates SQL without executing operations; startup still opens and checks the connection.
-	DryRun   bool
+	DryRun bool
+	// Pool configures this database's independent SQL pool; zero values preserve defaults.
+	Pool PoolConfig
 }
 
 // MySQLConfig extends common settings with charset and MySQL driver DSN parameters.
@@ -58,7 +61,7 @@ type MySQLConfig struct {
 	// DatabaseConfig supplies the common connection settings.
 	DatabaseConfig
 	// Charset defaults to utf8mb4 when empty.
-	Charset   string
+	Charset string
 	// URLParams supplies MySQL driver DSN options; parseTime and charset cannot override starter settings.
 	URLParams string
 }
@@ -70,7 +73,7 @@ type PostgresConfig struct {
 	// Timezone sets the PostgreSQL session timezone; empty defaults to UTC.
 	Timezone string
 	// SSLMode sets PostgreSQL SSL behavior; empty defaults to disable.
-	SSLMode  string
+	SSLMode string
 }
 
 // GormConfig initializes MySQL, PostgreSQL, or both; keep configuration fixed before first resolution.
@@ -78,21 +81,21 @@ type GormConfig struct {
 	// SQLLoggerLevel selects trace logging; values below InfoLevel use DebugLevel.
 	SQLLoggerLevel logger.Level
 	// MySQL configures MySQL when nonnil.
-	MySQL          *MySQLConfig
+	MySQL *MySQLConfig
 	// Postgres configures PostgreSQL when nonnil.
-	Postgres       *PostgresConfig
-	// InitFunc receives shared DB handles through the default parent hook after startup; pool tuning happens after connection checks.
-	InitFunc       func(databases map[DBType]*gorm.DB)
+	Postgres *PostgresConfig
+	// InitFunc receives shared DB handles through the default parent hook after startup; subsequent pool setters override startup settings.
+	InitFunc func(databases map[DBType]*gorm.DB)
 }
 
 // GormStarter owns the process-wide database registry; concurrent configuration mutation is unsupported.
 type GormStarter struct {
 	// Config supplies static settings when LazyConfig is nil.
-	Config      GormConfig
+	Config GormConfig
 	// LazyConfig takes precedence and is evaluated once on first Setting or Start resolution.
-	LazyConfig  func() GormConfig
-	config      *GormConfig
-	configOnce  sync.Once
+	LazyConfig func() GormConfig
+	config     *GormConfig
+	configOnce sync.Once
 	// GormSetting replaces the default lifecycle setting, including its InitFunc hook.
 	GormSetting *parent.Setting
 }
@@ -105,10 +108,12 @@ func (g *GormStarter) getConfig() *GormConfig {
 		}
 		if config.MySQL != nil {
 			mysqlConfig := *config.MySQL
+			mysqlConfig.Pool = clonePoolConfig(mysqlConfig.Pool)
 			config.MySQL = &mysqlConfig
 		}
 		if config.Postgres != nil {
 			postgresConfig := *config.Postgres
+			postgresConfig.Pool = clonePoolConfig(postgresConfig.Pool)
 			config.Postgres = &postgresConfig
 		}
 		g.config = &config
@@ -136,6 +141,16 @@ func (g *GormStarter) Start() (any, error) {
 	config := g.getConfig()
 	if config.MySQL == nil && config.Postgres == nil {
 		return nil, ErrNoDatabaseConfigured
+	}
+	if config.MySQL != nil {
+		if err := validatePoolConfig(config.MySQL.Pool); err != nil {
+			return nil, fmt.Errorf("mysql: %w", err)
+		}
+	}
+	if config.Postgres != nil {
+		if err := validatePoolConfig(config.Postgres.Pool); err != nil {
+			return nil, fmt.Errorf("postgres: %w", err)
+		}
 	}
 
 	gormLifecycleLock.Lock()
@@ -213,6 +228,7 @@ func (g *GormStarter) openDatabase(dbType DBType, config DatabaseConfig, open fu
 		log.WithError(err).Errorln("Failed to get database connection")
 		return nil, err
 	}
+	applyPoolConfig(sqlDB, config.Pool)
 	if err = sqlDB.Ping(); err != nil {
 		_ = sqlDB.Close()
 		log.WithError(err).Errorln("Database connection check failed")

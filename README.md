@@ -65,25 +65,39 @@ Common `DatabaseConfig` fields:
 | `Host`, `Port`, `Database` | Connection target. |
 | `TimeUTC` | Use UTC for GORM-generated timestamps. |
 | `DryRun` | Generate SQL without executing it. |
+| `Pool` | Configure the independent SQL pool for either database. |
 
 MySQL adds `Charset` and `URLParams`; PostgreSQL adds `Timezone` and `SSLMode`. `SQLLoggerLevel` controls SQL logging, and `InitFunc` runs through the default parent hook after startup with a copied database map containing shared DB handles. Replacing `GormSetting` replaces that hook too. `DryRun` still opens database connections and performs health checks.
 
 ### Connection Pools and Timeouts
 
-`DatabaseConfig` has no `MaxOpenConns`, `MaxIdleConns`, `ConnMaxLifetime`, or `ConnMaxIdleTime` fields. Tune each underlying SQL pool in `InitFunc` or after startup:
+Set `DatabaseConfig.Pool` identically for MySQL or PostgreSQL. Each database owns an independent pool:
 
 ```go
-sqlDB, err := gormstarter.RawMysqlGormDB().DB() // Requires successful startup.
-if err != nil {
-    return err
+maxOpen, maxIdle := 20, 5
+idleTime, lifetime := 5*time.Minute, 30*time.Minute
+pool := gormstarter.PoolConfig{
+    MaxOpenConns:    &maxOpen,
+    MaxIdleConns:    &maxIdle,
+    ConnMaxIdleTime: &idleTime,
+    ConnMaxLifetime: &lifetime,
 }
-sqlDB.SetMaxOpenConns(20)
-sqlDB.SetMaxIdleConns(5)
-sqlDB.SetConnMaxLifetime(30 * time.Minute)
-sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+mysqlConfig := gormstarter.MySQLConfig{
+    DatabaseConfig: gormstarter.DatabaseConfig{
+        Host: "localhost", Port: 3306, Database: "app",
+        Username: "YOUR_USERNAME", Password: "YOUR_PASSWORD",
+        Pool: pool,
+    },
+    URLParams: "timeout=3s&readTimeout=5s&writeTimeout=5s",
+}
+// Use mysqlConfig as GormConfig.MySQL; PostgreSQL accepts the same Pool field.
 ```
 
-These pool settings are separate from MySQL `URLParams` such as `timeout`, `readTimeout`, and `writeTimeout`. PostgreSQL configuration currently has no extra DSN parameter field. Startup health checks use `Ping()` without a starter-specific deadline, so post-start tuning cannot bound startup. Callers must not close shared pools.
+Nil pool fields preserve existing defaults. Explicit zero means unlimited open connections, no retained idle connections, or no corresponding time limit. Negative values return `ErrInvalidPoolConfig` before any database is opened. A positive `MaxOpenConns` caps the effective idle connection count. Lifetime and idle limits retire connections without interrupting operations already using them.
+
+Pool settings apply after GORM opens the database and before the starter's explicit Ping and runtime publication. Later setters in `InitFunc` or through raw accessors override the corresponding settings. Callers must not close shared pools.
+
+MySQL `URLParams` controls driver options such as connection/read/write timeouts, not pool limits; do not put pool field names there. There is no merge or precedence relationship between the two. PostgreSQL uses the same SQL pool configuration and currently exposes no extra DSN parameter field. Existing automatic and explicit Ping behavior is unchanged, with no starter-specific deadline; pool durations do not bound startup or SQL execution.
 
 Configure both `MySQL` and `Postgres` in the same `GormConfig` when needed. Database routing follows these rules:
 
@@ -316,3 +330,13 @@ GORM's missing-Where protection remains the final safeguard after package-level 
 ## Testing
 
 Run deterministic unit tests with `go test ./...`. Tests that connect to MySQL or PostgreSQL use the `integration` build tag and read connection settings from `STARTER_GORM_MYSQL_*` or `STARTER_GORM_POSTGRES_*` environment variables; run them explicitly with `go test -tags=integration ./test/...` after preparing the databases.
+
+Run the read-only connection-pool integration suite independently:
+
+```bash
+go test -mod=readonly -tags=integration -race -timeout=90s -count=1 -v ./test/pool
+```
+
+For each backend, set `STARTER_GORM_MYSQL_` or `STARTER_GORM_POSTGRES_` followed by `HOST`, `DATABASE`, `USERNAME`, and `PASSWORD`. The pool suite also accepts optional `PORT` (defaults: MySQL 13306, PostgreSQL 5432). Missing required settings fail the test rather than silently skipping it. To test one backend, add `-run '^TestPoolConfiguration/mysql$'` or `-run '^TestPoolConfiguration/postgres$'`.
+
+The suite starts and stops its own starter sequentially, executes only read-only queries, and needs no application tables. It verifies capacity waits, idle limits, explicit zero values, idle/lifetime retirement, MySQL DSN option coexistence, and independent MySQL/PostgreSQL pools. It does not run the other integration packages, which may mutate application data.
