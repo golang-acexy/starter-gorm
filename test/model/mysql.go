@@ -22,11 +22,11 @@ func (Student) TableName() string {
 	return "demo_student"
 }
 
-// Teacher 继承BaseModel 并实现 Model
+// Teacher defines the shared test model and implements Model.
 type Teacher struct {
 	ID        uint64                `gorm:"<-:false;primaryKey" json:"id"`
 	CreatedAt gormstarter.Timestamp `gorm:"column:create_time;<-:false" json:"createTime"`
-	UpdatedAt gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"` // 指定update时自动更新时间
+	UpdatedAt gormstarter.Timestamp `gorm:"column:update_time;<-:update" json:"updateTime"` // Restrict this field to updates.
 	Name      string
 	Sex       uint
 	Age       uint
@@ -41,7 +41,7 @@ func (Teacher) DBType() gormstarter.DBType {
 	return gormstarter.DBTypeMySQL
 }
 
-// TeacherMapper 声明Teacher 获取基于BaseMapper的能力
+// TeacherMapper exposes BaseMapper operations for Teacher.
 type TeacherMapper struct {
 	gormstarter.BaseMapper[Teacher]
 }

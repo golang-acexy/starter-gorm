@@ -124,7 +124,7 @@ func TestWrapperAllCapabilities(t *testing.T) {
 		t.Fatalf("Wrapper 分页异常: total=%d records=%+v err=%v", total, pageRecords, err)
 	}
 
-	// CreatedAt 使用 column:create_time，能正常排序说明列名来自当前 GORM Schema。
+	// Verify sorting resolves CreatedAt from GORM column:create_time metadata.
 	var tagRecords []*Teacher
 	tagQuery := mapper.Wrapper().HasPrefix(c.Name, scope).OrderByDesc(c.CreatedAt).Limit(1)
 	if _, err := mapper.SelectByWrapper(tagQuery, &tagRecords); err != nil || len(tagRecords) != 1 {

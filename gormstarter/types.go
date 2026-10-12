@@ -10,90 +10,134 @@ import (
 )
 
 const (
+	// DBTypeMySQL identifies the MySQL registry entry.
 	DBTypeMySQL    DBType = "mysql"
+	// DBTypePostgres identifies the PostgreSQL registry entry.
 	DBTypePostgres DBType = "postgres"
 )
 
-// Timestamp 时间戳处理 接收数据库的时间类型
+// Timestamp scans SQL time.Time/null and uses toolkit global JSON timestamp units; synchronize shared mutation.
 type Timestamp json.Timestamp
 
-// NewTimestamp 创建时间戳
+// NewTimestamp wraps a time value without changing its location.
 func NewTimestamp(time time.Time) Timestamp {
 	return Timestamp{Time: time}
 }
 
+// DBType identifies a registered database dialect.
 type DBType string
 
+// Model supplies a stable table name and must support TableName on its zero value.
 type Model interface {
+	// TableName returns stable model metadata and must support the model zero value.
 	TableName() string
 }
 
-// ModelWithDBType 当gorm管理多个不同数据库类型时，需要实现此接口 以便指定该数据库类型 （若只有初始化了一种类型的数据库，不用指定，配置多种数据库类型时，默认缺省DBType 的默认为MySQL类型）
+// ModelWithDBType selects a database dialect; a bound transaction takes precedence over routing.
 type ModelWithDBType interface {
+	// TableName returns stable model metadata and must support the model zero value.
 	TableName() string
+	// DBType returns stable model metadata and must support the model zero value.
 	DBType() DBType
 }
 
+// BaseMapper supplies driver-facing operations with caller-owned result destinations.
+// Its model zero value must support TableName and optional DBType. Shared DB handles do not
+// make mutable result buffers, filters, query options, or chained sessions concurrency-safe.
 type BaseMapper[M Model] struct {
 	model M
 	tx    *gorm.DB
 }
 
-// TimeRange 定义基于某个时间字段的起止范围过滤条件，使用左闭右开区间 [StartTime, EndTime)。
-// StartTime / EndTime 为 nil 时表示该方向不限。
+// TimeRange filters a trusted database field over [StartTime, EndTime); nil endpoints omit that bound.
 type TimeRange struct {
-	Field     string     // 数据库时间字段名（列名），如 "created_at"
-	StartTime *time.Time // 起始时间（含），nil 表示不限制下界
-	EndTime   *time.Time // 结束时间（不含），nil 表示不限制上界
+	// Field is a trusted SQL field expression; it is not quoted or allowlisted by this range API.
+	Field     string
+	// StartTime is an inclusive lower bound; nil omits it.
+	StartTime *time.Time
+	// EndTime is an exclusive upper bound; nil omits it.
+	EndTime   *time.Time
 }
 
+// QueryOptions groups trusted ordering/projection, time filters, and a list-only limit.
 type QueryOptions struct {
+	// OrderBySQL is a trusted ordering expression; do not pass unvalidated external SQL.
 	OrderBySQL    string
+	// SelectColumns supplies trusted projection columns or expressions.
 	SelectColumns []string
-	TimeRanges    []TimeRange // 基于时间的过滤条件，支持多个时间字段
+	// TimeRanges adds half-open filters; endpoint pointers are borrowed and range ordering is not validated.
+	TimeRanges    []TimeRange
+	// Limit applies only to list queries; zero is unrestricted and negatives are rejected.
 	Limit         int
 }
 
+// PageOptions contains positive page inputs plus trusted ordering/projection and time filters.
 type PageOptions struct {
+	// Number is the positive one-based page input.
 	Number        int
+	// Size is the positive page size; no shared maximum is imposed.
 	Size          int
+	// OrderBySQL is a trusted ordering expression; do not pass unvalidated external SQL.
 	OrderBySQL    string
+	// SelectColumns supplies trusted projection columns or expressions.
 	SelectColumns []string
+	// TimeRanges adds half-open filters; endpoint pointers are borrowed and range ordering is not validated.
 	TimeRanges    []TimeRange
 }
 
+// PageQuery combines struct predicates, whose zero fields are omitted, with page options.
 type PageQuery[T Model] struct {
+	// Condition supplies predicates; struct zero fields are omitted and maps remain borrowed.
 	Condition T
+	// PageOptions supplies page inputs, ordering, projection, and time filters.
 	PageOptions
 }
 
+// MapPageQuery combines a borrowed predicate map with page options.
 type MapPageQuery struct {
+	// Condition supplies predicates; struct zero fields are omitted and maps remain borrowed.
 	Condition map[string]any
+	// PageOptions supplies page inputs, ordering, projection, and time filters.
 	PageOptions
 }
 
+// WherePageQuery combines trusted SQL, bound arguments, and page options.
 type WherePageQuery struct {
+	// RawWhereSQL is a trusted SQL filter; runtime values must use Args.
 	RawWhereSQL string
+	// Args supplies bound values; referenced argument values remain borrowed.
 	Args        []any
+	// PageOptions supplies page inputs, ordering, projection, and time filters.
 	PageOptions
 }
 
+// CondQuery combines struct predicates, whose zero fields are omitted, with query options.
 type CondQuery[T Model] struct {
+	// Condition supplies predicates; struct zero fields are omitted and maps remain borrowed.
 	Condition T
+	// QueryOptions supplies ordering, projection, time filters, and list limits.
 	QueryOptions
 }
 
+// MapQuery combines a borrowed predicate map preserving zero values with query options.
 type MapQuery struct {
+	// Condition supplies predicates; struct zero fields are omitted and maps remain borrowed.
 	Condition map[string]any
+	// QueryOptions supplies ordering, projection, time filters, and list limits.
 	QueryOptions
 }
 
+// WhereQuery combines trusted SQL and bound arguments with query options.
 type WhereQuery struct {
+	// RawWhereSQL is a trusted SQL filter; runtime values must use Args.
 	RawWhereSQL string
+	// Args supplies bound values; referenced argument values remain borrowed.
 	Args        []any
+	// QueryOptions supplies ordering, projection, time filters, and list limits.
 	QueryOptions
 }
 
+// Scan accepts time.Time or nil on a nonnil receiver; null resets it and unsupported types preserve it.
 func (t *Timestamp) Scan(value any) error {
 	if value == nil {
 		*t = Timestamp{Time: time.Time{}}
@@ -108,17 +152,20 @@ func (t *Timestamp) Scan(value any) error {
 	return nil
 }
 
+// Value returns SQL null for zero time, otherwise the underlying time.Time.
 func (t Timestamp) Value() (driver.Value, error) {
 	if t.IsZero() {
-		return nil, nil // 如果时间为零值，返回 nil
+		return nil, nil // Represent zero time as SQL null.
 	}
-	return t.Time, nil // 返回底层的 time.Time 类型
+	return t.Time, nil // Return the underlying SQL-compatible time value.
 }
 
+// MarshalJSON uses toolkit timestamp units; zero time encodes as numeric zero.
 func (t Timestamp) MarshalJSON() ([]byte, error) {
 	return json.Time2Timestamp(t.Time)
 }
 
+// UnmarshalJSON uses toolkit timestamp units on a nonnil receiver; null resets it and errors preserve it.
 func (t *Timestamp) UnmarshalJSON(data []byte) error {
 	formatTime, err := json.Timestamp2Time(data)
 	if err != nil {
@@ -128,161 +175,123 @@ func (t *Timestamp) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// RawMapper 提供当前 Mapper 对应的原生 GORM 操作能力。
+// RawMapper exposes borrowed GORM handles; caller must not close their shared pools.
 type RawMapper interface {
-	// TableGormDB 获取已限定当前 Mapper 表名的原生 gorm.DB。
+	// TableGormDB returns a table-scoped handle, or nil on routing failure; caller must not close the shared pool.
 	TableGormDB() *gorm.DB
-
-	// CurrentGormDB 获取当前 Mapper 使用的 gorm.DB；绑定事务时返回该事务，否则返回新的 gorm.DB。
+	// CurrentGormDB returns the bound transaction or shared routed DB, not a new isolated session; errors become nil.
 	CurrentGormDB() *gorm.DB
 }
 
-// QueryMapper 提供查询能力。
+// QueryMapper scans into caller-owned nonnil destinations; zero rows generally do not return record-not-found errors.
 type QueryMapper[T Model] interface {
-	// SelectByID 通过主键查询数据
+	// SelectByID binds the ID to column id and scans into a nonnil destination; no match returns zero rows.
 	SelectByID(id any, result *T) (int64, error)
-
-	// SelectByIDs 通过主键查询数据
+	// SelectByIDs binds an ID batch to column id; an empty batch is rejected and results are not ordered by input IDs.
 	SelectByIDs(ids []any, result *[]*T) (int64, error)
-
-	// ExistsByID 判断指定主键的数据是否存在
+	// ExistsByID counts column-id matches; empty IDs are rejected and driver errors are propagated.
 	ExistsByID(id any) (bool, error)
-
-	// SelectOneByCond 通过实体条件查询一条数据，条件中的零值字段将被自动忽略。
+	// SelectOneByCond scans at most one match; GORM omits zero-valued struct condition fields.
 	SelectOneByCond(query CondQuery[T], result *T) (int64, error)
-
-	// SelectByCond 通过条件查询 查询条件零值字段将被自动忽略
-	// specifyColumns 指定只需要查询的数据库字段
+	// SelectByCond scans struct-filter matches; zero condition fields are omitted and zero Limit is unrestricted.
 	SelectByCond(query CondQuery[T], result *[]*T) (int64, error)
-
-	// SelectOneByMap 通过指定字段与值查询数据 解决查询条件零值问题
-	// specifyColumns 指定只需要查询的数据库字段
+	// SelectOneByMap scans at most one match using explicit map predicates, including zero values.
 	SelectOneByMap(query MapQuery, result *T) (int64, error)
-
-	// SelectByMap 通过指定字段与值查询数据 解决零值条件问题
-	// specifyColumns 指定只需要查询的数据库字段
+	// SelectByMap scans map-filter matches, preserving zero predicates; negative Limit is rejected.
 	SelectByMap(query MapQuery, result *[]*T) (int64, error)
-
-	// SelectOneByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
+	// SelectOneByWhere scans a trusted SQL filter without adding LIMIT 1 and warns if multiple rows are scanned.
+	// Callers own cardinality and must bind runtime values through Args.
 	SelectOneByWhere(query WhereQuery, result *T) (int64, error)
-
-	// SelectByWhere 通过原始 Where SQL 查询，只需要传入 rawWhereSQL 和参数
+	// SelectByWhere scans a trusted SQL filter with bound Args; negative Limit is rejected.
 	SelectByWhere(query WhereQuery, result *[]*T) (int64, error)
-
-	// SelectOneByGorm 通过原始Gorm查询单条数据 构建Gorm查询条件
+	// SelectOneByGorm invokes a nonnil callback on the table-scoped DB, then scans; the callback owns cardinality.
 	SelectOneByGorm(result *T, rawDB func(*gorm.DB)) (int64, error)
-
-	// SelectByGorm 通过原始Gorm查询数据
+	// SelectByGorm invokes a nonnil callback on the table-scoped DB and scans into the caller-owned slice.
 	SelectByGorm(result *[]*T, rawDB func(*gorm.DB)) (int64, error)
-
-	// SelectOneByWrapper 使用类型安全的 Wrapper 查询一条数据。
+	// SelectOneByWrapper scans at most one match; wrapper Limit and Offset are not applied.
 	SelectOneByWrapper(query *QueryWrapper[T], result *T) (int64, error)
-
-	// SelectByWrapper 使用类型安全的 Wrapper 查询数据。
+	// SelectByWrapper scans wrapper matches with projection, ordering, and validated range settings.
 	SelectByWrapper(query *QueryWrapper[T], result *[]*T) (int64, error)
-
-	// CountByCond 通过实体条件统计数据，条件中的零值字段将被自动忽略。
+	// CountByCond applies struct predicates and time ranges; zero fields are omitted and projection/order/Limit are ignored.
 	CountByCond(query CondQuery[T]) (int64, error)
-
-	// CountByMap 通过 Map 条件统计数据，支持显式零值条件。
+	// CountByMap applies map predicates and time ranges; projection/order/Limit are ignored.
 	CountByMap(query MapQuery) (int64, error)
-
-	// CountByWhere 通过原始 SQL 条件统计数据。
+	// CountByWhere counts a trusted SQL filter with bound Args and time ranges, ignoring projection/order/Limit.
 	CountByWhere(query WhereQuery) (int64, error)
-
-	// CountByGorm 通过原始Gorm查询数据总数
+	// CountByGorm invokes a nonnil callback on the table-scoped DB; the callback owns count filters.
 	CountByGorm(rawDB func(*gorm.DB)) (int64, error)
-
-	// CountByWrapper 使用 Wrapper 条件统计数据总数，忽略投影、排序、Limit 和 Offset。
+	// CountByWrapper counts wrapper predicates while ignoring projection, order, Limit, and Offset.
 	CountByWrapper(query *QueryWrapper[T]) (int64, error)
-
-	// SelectPageByCond 通过实体条件分页查询，条件中的零值字段将被自动忽略。
+	// SelectPageByCond counts then scans a struct-filter page; positive page inputs are required and zero fields are omitted.
+	// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 	SelectPageByCond(query PageQuery[T], result *[]*T) (total int64, err error)
-
-	// SelectPageByMap 通过 Map 条件分页查询，支持显式查询零值字段。
+	// SelectPageByMap counts then scans a map-filter page; positive page inputs are required.
+	// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 	SelectPageByMap(query MapPageQuery, result *[]*T) (total int64, err error)
-
-	// SelectPageByWhere 通过原始 SQL 分页查询
+	// SelectPageByWhere counts then scans a trusted SQL-filter page using bound Args and positive page inputs.
+	// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 	SelectPageByWhere(query WherePageQuery, result *[]*T) (total int64, err error)
-
-	// SelectPageByGorm 通过原始Gorm分页查询
+	// SelectPageByGorm invokes nonnil count/data callbacks separately; callers supply matching filters and pagination.
+	// Zero count skips the data callback and leaves the result destination untouched.
 	SelectPageByGorm(countRawDB func(*gorm.DB), pageRawDB func(*gorm.DB), result *[]*T) (total int64, err error)
-
-	// SelectPageByWrapper 使用 Wrapper 条件分页查询。
+	// SelectPageByWrapper counts then scans a page wrapper; nil wrappers and invalid page inputs are rejected.
+	// Count and scan are separate statements; zero count leaves the destination untouched. No snapshot is created.
 	SelectPageByWrapper(query *PageWrapper[T], result *[]*T) (total int64, err error)
 }
 
-// InsertMapper 提供新增能力。
+// InsertMapper writes model or map data using GORM defaults and returns driver-reported affected rows.
 type InsertMapper[T Model] interface {
-	// Insert 保存数据 零值也将参与保存
-	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段名称
+	// Insert applies GORM Create to a nonnil entity; excluded columns are omitted and model defaults follow GORM semantics.
 	Insert(entity *T, excludeColumns ...string) (int64, error)
-
-	// InsertBatch 批量新增 零值也将参与保存
-	//	exclude 手动指定需要排除的字段名称 数据库字段/结构体字段
+	// InsertBatch applies GORM Create to a nonempty batch of nonnil entities; excluded columns are omitted.
 	InsertBatch(entities []*T, excludeColumns ...string) (int64, error)
-
-	// InsertWithoutZeroFields 保存数据 零值字段将不会参与保存
+	// InsertWithoutZeroFields selects reflected nonzero Go fields; nil or empty effective data is rejected.
 	InsertWithoutZeroFields(entity *T) (int64, error)
-
-	// InsertWithMap 通过 Map 类型保存数据
+	// InsertWithMap creates an explicit nonempty column/value map without model-field zero omission.
 	InsertWithMap(entity map[string]any) (int64, error)
-
-	// InsertOrUpdateByPrimaryKey 保存/更新数据 零值也将参与保存
-	// exclude 手动指定需要排除的字段名称 数据库字段/结构体字段 (如果触发的是update 创建时间可能会被错误的修改，可以通过excludeColumns来指定排除创建时间字段)
-	// 仅根据主键冲突默认支持update 更多操作需要参阅 https://gorm.io/zh_CN/docs/create.html#upsert
+	// InsertOrUpdateByPrimaryKey delegates to GORM Save, not an arbitrary conflict-target upsert.
+	// Excluded columns are omitted; full-field updates can overwrite creation timestamps unless excluded.
 	InsertOrUpdateByPrimaryKey(entity *T, excludeColumns ...string) (int64, error)
 }
 
-// UpdateMapper 提供更新能力。
+// UpdateMapper applies guarded updates; affected-row semantics depend on the database driver and connection settings.
 type UpdateMapper[T Model] interface {
-	// UpdateByID 通过实体中的主键 ID 更新含零值字段
-	// updateColumns 手动指定需要更新的列
+	// UpdateByID updates column-id matches; without selected columns GORM omits zero-valued struct updates.
+	// Explicitly selected columns include zero values. Empty IDs or effective update data are rejected.
 	UpdateByID(updated *T, id any, updateColumns ...string) (int64, error)
-
-	// UpdateByIDWithoutZeroFields 通过ID更新非零值字段
-	// allowZeroFieldColumns 额外指定需要更新零值字段
+	// UpdateByIDWithoutZeroFields selects nonzero fields plus allowZeroFieldColumns; the ID itself is not sufficient update data.
 	UpdateByIDWithoutZeroFields(updated *T, id any, allowZeroFieldColumns ...string) (int64, error)
-
-	// UpdateByIDWithMap 通过 ID 更新 Map 中指定的列和值
+	// UpdateByIDWithMap applies explicit nonempty map values, including zero/nil, to a validated column-id match.
 	UpdateByIDWithMap(updated map[string]any, id any) (int64, error)
-
-	// UpdateByCond 通过条件更新 条件：零值将自动忽略，更新：零值字段将被自动忽略
-	// updateColumns 需要指定更新的数据库字段 更新指定字段(支持零值字段)
+	// UpdateByCond omits zero struct predicates and, unless columns are selected, zero struct update values.
 	UpdateByCond(updated *T, condition T, updateColumns ...string) (int64, error)
-
-	// UpdateByCondWithZeroFields 通过条件更新，并指定可以更新的零值字段
+	// UpdateByCondWithZeroFields omits zero struct predicates and selects nonzero updates plus allowZeroFieldColumns.
 	UpdateByCondWithZeroFields(updated *T, condition T, allowZeroFieldColumns ...string) (int64, error)
-
-	// UpdateByMap 通过Map类型条件更新
+	// UpdateByMap requires nonempty predicate and update maps and preserves explicit zero/nil values.
 	UpdateByMap(updated, condition map[string]any) (int64, error)
-
-	// UpdateByWhere 通过原始 Where SQL 条件更新非零实体字段
+	// UpdateByWhere requires trusted nonblank SQL with bound args and nonempty effective struct update data.
 	UpdateByWhere(updated *T, rawWhereSQL string, args ...any) (int64, error)
-
-	// UpdateByWrapper 使用 Wrapper 条件和 Set 赋值更新数据。
+	// UpdateByWrapper requires predicates and assignments; zero/nil assignments are kept and the last repeated field wins.
 	UpdateByWrapper(wrapper *UpdateWrapper[T]) (int64, error)
 }
 
-// DeleteMapper 提供删除能力。
+// DeleteMapper applies guarded deletion and follows model soft-delete settings; DeleteByID has string-condition caveats.
 type DeleteMapper[T Model] interface {
-	// DeleteByID 通过 ID 删除单条数据
+	// DeleteByID delegates ID conditions to GORM Delete and follows model soft-delete behavior.
+	// Nonnumeric strings are interpreted as SQL clauses, not bound IDs; do not pass arbitrary string IDs.
+	// Use a bound Where/Map filter for ordinary string keys until this shortcut is changed.
 	DeleteByID(id any) (int64, error)
-
-	// DeleteByIDs 通过多个 ID 删除数据
+	// DeleteByIDs delegates a nonempty ID batch to GORM Delete; individual IDs are not validated and soft deletion follows the model.
 	DeleteByIDs(ids []any) (int64, error)
-
-	// DeleteByCond 通过条件删除 零值字段将被自动忽略
+	// DeleteByCond rejects a reflected zero condition; GORM omits zero-valued struct predicates and applies model soft deletion.
 	DeleteByCond(condition T) (int64, error)
-
-	// DeleteByMap 通过Map类型条件删除
+	// DeleteByMap requires a nonempty predicate map and follows model soft deletion.
 	DeleteByMap(condition map[string]any) (int64, error)
-
-	// DeleteByWhere 通过原始 Where SQL 删除相关数据
+	// DeleteByWhere requires a trusted nonblank SQL filter with bound args and follows model soft deletion.
 	DeleteByWhere(rawWhereSQL string, args ...any) (int64, error)
 }
 
-// Mapper 聚合原生 GORM、查询、新增、更新和删除能力。
+// Mapper aggregates raw handles and query, insert, update, and delete APIs.
 type Mapper[T Model] interface {
 	RawMapper
 	QueryMapper[T]

@@ -20,11 +20,12 @@ func effectiveSQLLoggerLevel(level log.Level) log.Level {
 	return level
 }
 
+// LogMode returns this adapter without changing its configured SQL trace level.
 func (l *logrusLogger) LogMode(level logger.LogLevel) logger.Interface {
 	return l
 }
 
-// Trace gorm打印sql的专用日志级别
+// Trace logs SQL and affected rows at the configured level; errors always log at ERROR.
 func (l *logrusLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
 	if err != nil {
 		elapsed := time.Since(begin)
@@ -39,14 +40,17 @@ func (l *logrusLogger) Trace(ctx context.Context, begin time.Time, fc func() (sq
 	}
 }
 
+// Info forwards formatted GORM informational events to the application logger.
 func (l *logrusLogger) Info(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Infof(msg, data...)
 }
 
+// Warn forwards formatted GORM warnings to the application logger.
 func (l *logrusLogger) Warn(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Warnf(msg, data...)
 }
 
+// Error forwards formatted GORM errors to the application logger.
 func (l *logrusLogger) Error(ctx context.Context, msg string, data ...any) {
 	log.Logrus().WithContext(ctx).Errorf(msg, data...)
 }
