@@ -41,6 +41,15 @@ func TestSelectOneByWhereDoesNotAppendLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("创建 DryRun 数据库失败：%v", err)
 	}
+	pool, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := pool.Close(); err != nil {
+			t.Errorf("close DryRun pool: %v", err)
+		}
+	})
 
 	mapper := BaseMapper[validationModel]{model: validationModel{}, tx: db}
 	var result validationModel
